@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -18,6 +19,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['Roboto', 'sans-serif'],
+				roboto: ['Roboto', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -25,11 +30,18 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
+					DEFAULT: '#3D518C',
+					dark: '#091540',
+					light: '#7692FF',
+					accent: '#E9724C',
+					lightest: '#ABD3FA',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
+					DEFAULT: '#CCCCCC',
+					dark: '#40432E',
+					darkest: '#151515',
+					white: '#FFFFFF',
 					foreground: 'hsl(var(--secondary-foreground))'
 				},
 				destructive: {
@@ -67,6 +79,12 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-1': 'linear-gradient(to right, #3D518C, #7692FF, #ABD3FA)',
+				'gradient-2': 'linear-gradient(to right, #3D518C, #ABD3FA)',
+				'gradient-3': 'linear-gradient(to right, #3D518C, #7692FF)',
+				'gradient-4': 'linear-gradient(to right, #7692FF, #ABD3FA)',
 			},
 			keyframes: {
 				'accordion-down': {
