@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -23,19 +22,32 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+// Initial domains data (this should come from the Domains page in a real app)
+const domainOptions = [
+  { value: 'Retail', label: 'Retail' },
+  { value: 'FMCG', label: 'FMCG' },
+  { value: 'Loyalty', label: 'Loyalty' },
+  { value: 'Customer Analytics', label: 'Customer Analytics' },
+];
 
 // Dummy data for companies
 const initialCompanies = [
-  { id: 1, name: 'Google', domain: 'google.com', category: 'Tech', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 2, name: 'Facebook', domain: 'facebook.com', category: 'Social Media', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 3, name: 'Amazon', domain: 'amazon.com', category: 'E-commerce', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 4, name: 'Netflix', domain: 'netflix.com', category: 'Entertainment', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 5, name: 'Microsoft', domain: 'microsoft.com', category: 'Tech', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 6, name: 'Twitter', domain: 'twitter.com', category: 'Social Media', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 7, name: 'Airbnb', domain: 'airbnb.com', category: 'Travel', status: 'inactive', logo: 'https://via.placeholder.com/150' },
-  { id: 8, name: 'Spotify', domain: 'spotify.com', category: 'Music', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 9, name: 'Uber', domain: 'uber.com', category: 'Transportation', status: 'inactive', logo: 'https://via.placeholder.com/150' },
-  { id: 10, name: 'LinkedIn', domain: 'linkedin.com', category: 'Professional', status: 'active', logo: 'https://via.placeholder.com/150' },
+  { id: 1, name: 'Google', domains: ['Retail', 'Customer Analytics'], category: 'Tech', status: 'active', logo: 'https://via.placeholder.com/150' },
+  { id: 2, name: 'Facebook', domains: ['Customer Analytics'], category: 'Social Media', status: 'active', logo: 'https://via.placeholder.com/150' },
+  { id: 3, name: 'Amazon', domains: ['Retail', 'FMCG'], category: 'E-commerce', status: 'active', logo: 'https://via.placeholder.com/150' },
+  { id: 4, name: 'Netflix', domains: ['Customer Analytics'], category: 'Entertainment', status: 'active', logo: 'https://via.placeholder.com/150' },
+  { id: 5, name: 'Microsoft', domains: ['Retail', 'Loyalty'], category: 'Tech', status: 'active', logo: 'https://via.placeholder.com/150' },
+  { id: 6, name: 'Twitter', domains: ['Social Media'], category: 'Social Media', status: 'active', logo: 'https://via.placeholder.com/150' },
+  { id: 7, name: 'Airbnb', domains: ['Travel'], category: 'Travel', status: 'inactive', logo: 'https://via.placeholder.com/150' },
+  { id: 8, name: 'Spotify', domains: ['Entertainment'], category: 'Music', status: 'active', logo: 'https://via.placeholder.com/150' },
+  { id: 9, name: 'Uber', domains: ['Transportation'], category: 'Transportation', status: 'inactive', logo: 'https://via.placeholder.com/150' },
+  { id: 10, name: 'LinkedIn', domains: ['Professional'], category: 'Professional', status: 'active', logo: 'https://via.placeholder.com/150' },
 ];
 
 const categoryOptions = [
@@ -57,7 +69,7 @@ const statusOptions = [
 interface Company {
   id: number;
   name: string;
-  domain: string;
+  domains: string[];
   category: string;
   status: string;
   logo?: string;
@@ -72,7 +84,7 @@ const Companies = () => {
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState<Partial<Company>>({
     name: '',
-    domain: '',
+    domains: [],
     category: '',
     status: 'active',
     logo: '',
@@ -103,8 +115,7 @@ const Companies = () => {
     
     if (term) {
       filtered = filtered.filter(company => 
-        company.name.toLowerCase().includes(term.toLowerCase()) || 
-        company.domain.toLowerCase().includes(term.toLowerCase())
+        company.name.toLowerCase().includes(term.toLowerCase())
       );
     }
     
@@ -117,12 +128,21 @@ const Companies = () => {
     }
     
     setFilteredCompanies(filtered);
+    return filtered;
   };
   
   // Handle form data change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    if (name === 'domains') {
+      setFormData({ ...formData, domains: value ? value.split(',') : [] });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleDomainsChange = (domains: string[]) => {
+    setFormData(prev => ({ ...prev, domains: domains }));
   };
   
   // Open dialog for creating or editing a company
@@ -131,7 +151,7 @@ const Companies = () => {
       setCurrentCompany(company);
       setFormData({
         name: company.name,
-        domain: company.domain,
+        domains: Array.isArray(company.domains) ? company.domains : [],
         category: company.category,
         status: company.status,
         logo: company.logo || '',
@@ -140,7 +160,7 @@ const Companies = () => {
       setCurrentCompany(null);
       setFormData({
         name: '',
-        domain: '',
+        domains: [],
         category: '',
         status: 'active',
         logo: '',
@@ -159,7 +179,7 @@ const Companies = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.domain || !formData.category) {
+    if (!formData.name || !formData.domains?.length || !formData.category) {
       toast({
         title: "Error",
         description: "Please fill all required fields",
@@ -174,9 +194,7 @@ const Companies = () => {
         company.id === currentCompany.id ? { ...company, ...formData } : company
       );
       setCompanies(updatedCompanies);
-      setFilteredCompanies(
-        filterCompanies(searchTerm, categoryFilter, statusFilter)
-      );
+      filterCompanies(searchTerm, categoryFilter, statusFilter);
       toast({
         title: "Success",
         description: "Company updated successfully",
@@ -186,7 +204,7 @@ const Companies = () => {
       const newCompany = {
         id: companies.length + 1,
         name: formData.name!,
-        domain: formData.domain!,
+        domains: formData.domains!,
         category: formData.category!,
         status: formData.status || 'active',
         logo: formData.logo || 'https://via.placeholder.com/150',
@@ -209,9 +227,7 @@ const Companies = () => {
     
     const updatedCompanies = companies.filter(company => company.id !== currentCompany.id);
     setCompanies(updatedCompanies);
-    setFilteredCompanies(
-      filterCompanies(searchTerm, categoryFilter, statusFilter)
-    );
+    filterCompanies(searchTerm, categoryFilter, statusFilter);
     
     setIsDeleteDialogOpen(false);
     toast({
@@ -251,13 +267,13 @@ const Companies = () => {
         ]}
       />
       
-      <div className="data-card overflow-hidden">
+      <div className="mt-6">
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
               <tr>
                 <th className="pl-4 pr-6 py-3">Name</th>
-                <th>Domain</th>
+                <th>Domains</th>
                 <th>Category</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -280,7 +296,15 @@ const Companies = () => {
                       <span className="font-medium">{company.name}</span>
                     </div>
                   </td>
-                  <td>{company.domain}</td>
+                  <td>
+                    <div className="flex flex-wrap gap-1">
+                      {company.domains.map((domain) => (
+                        <Badge key={domain} variant="secondary">
+                          {domain}
+                        </Badge>
+                      ))}
+                    </div>
+                  </td>
                   <td>{company.category}</td>
                   <td>
                     <StatusBadge status={company.status} />
@@ -348,19 +372,64 @@ const Companies = () => {
               </div>
               
               <div>
-                <Label htmlFor="domain">Domain*</Label>
-                <Input
-                  id="domain"
-                  name="domain"
-                  value={formData.domain || ''}
-                  onChange={handleChange}
-                  placeholder="example.com"
-                  className="mt-1"
-                />
+                <Label>Domains*</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between mt-1"
+                    >
+                      {formData.domains?.length > 0
+                        ? `${formData.domains.length} domains selected`
+                        : "Select domains..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput placeholder="Search domains..." />
+                      <CommandList>
+                        <CommandEmpty>No domain found.</CommandEmpty>
+                        <CommandGroup>
+                          {domainOptions.map((domain) => (
+                            <CommandItem
+                              key={domain.value}
+                              onSelect={() => {
+                                const currentDomains = formData.domains || [];
+                                const newDomains = currentDomains.includes(domain.value)
+                                  ? currentDomains.filter((d) => d !== domain.value)
+                                  : [...currentDomains, domain.value];
+                                handleDomainsChange(newDomains);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.domains?.includes(domain.value) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {domain.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {formData.domains?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {formData.domains.map((domain) => (
+                      <Badge key={domain} variant="secondary">
+                        {domain}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
               
-              <div className="flex gap-4">
-                <div className="flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <Label htmlFor="category">Category*</Label>
                   <select
                     id="category"
@@ -378,7 +447,7 @@ const Companies = () => {
                   </select>
                 </div>
                 
-                <div className="flex-1">
+                <div>
                   <Label htmlFor="status">Status</Label>
                   <select
                     id="status"

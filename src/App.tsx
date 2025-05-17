@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 // Import all pages
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
+import Domains from "./pages/Domains";
 import Questions from "./pages/Questions";
 import Topics from "./pages/Topics";
 import Submissions from "./pages/Submissions";
@@ -27,6 +27,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/companies" element={<Companies />} />
+          <Route path="/domains" element={<Domains />} />
           <Route path="/questions" element={<Questions />} />
           <Route path="/topics" element={<Topics />} />
           <Route path="/submissions" element={<Submissions />} />

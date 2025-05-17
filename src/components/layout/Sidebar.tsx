@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
@@ -10,7 +9,8 @@ import {
   FileCheck, 
   Settings, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  Tag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +28,11 @@ const Sidebar = () => {
       name: 'Companies',
       icon: Building2,
       path: '/companies',
+    },
+    {
+      name: 'Domains',
+      icon: Tag,
+      path: '/domains',
     },
     {
       name: 'Questions',

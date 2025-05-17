@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -11,6 +10,7 @@ import {
   Eye,
   Pencil,
   Trash2,
+  X,
 } from 'lucide-react';
 import {
   Tabs,
@@ -152,6 +152,7 @@ interface Question {
   status: string;
   content: string;
   schema: string;
+  schemaImage?: string;
   solution: string;
 }
 
@@ -172,6 +173,7 @@ const Questions = () => {
     status: 'active',
     content: '',
     schema: '',
+    schemaImage: '',
     solution: '',
   });
   
@@ -251,6 +253,35 @@ const Questions = () => {
     setFormData({ ...formData, [name]: value });
   };
   
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file type
+      if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+        toast({
+          title: "Error",
+          description: "Please upload a valid image file (JPG, JPEG, or PNG)",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Error",
+          description: "Image size should be less than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create a preview URL
+      const imageUrl = URL.createObjectURL(file);
+      setFormData(prev => ({ ...prev, schemaImage: imageUrl }));
+    }
+  };
+  
   // Open dialog for creating or editing a question
   const openDialog = (question: Question | null = null) => {
     if (question) {
@@ -264,6 +295,7 @@ const Questions = () => {
         status: question.status,
         content: question.content,
         schema: question.schema,
+        schemaImage: question.schemaImage,
         solution: question.solution,
       });
     } else {
@@ -277,6 +309,7 @@ const Questions = () => {
         status: 'active',
         content: '',
         schema: '',
+        schemaImage: '',
         solution: '',
       });
     }
@@ -331,6 +364,7 @@ const Questions = () => {
         status: formData.status || 'active',
         content: formData.content!,
         schema: formData.schema || '',
+        schemaImage: formData.schemaImage,
         solution: formData.solution || '',
       };
       const updatedQuestions = [...questions, newQuestion];
@@ -614,15 +648,53 @@ const Questions = () => {
               </TabsContent>
               
               <TabsContent value="schema" className="mt-4">
-                <Label htmlFor="schema">Database Schema/ERD</Label>
-                <Textarea
-                  id="schema"
-                  name="schema"
-                  value={formData.schema || ''}
-                  onChange={handleChange}
-                  placeholder="Describe the database schema or paste ERD details here..."
-                  className="mt-1 min-h-[200px]"
-                />
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="schema">Database Schema/ERD</Label>
+                    <Textarea
+                      id="schema"
+                      name="schema"
+                      value={formData.schema || ''}
+                      onChange={handleChange}
+                      placeholder="Describe the database schema or paste ERD details here..."
+                      className="mt-1 min-h-[200px]"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="schemaImage">Schema/ERD Image</Label>
+                    <div className="mt-1 flex items-center gap-4">
+                      <Input
+                        id="schemaImage"
+                        type="file"
+                        accept=".jpg,.jpeg,.png"
+                        onChange={handleImageChange}
+                        className="w-full"
+                      />
+                      {formData.schemaImage && (
+                        <div className="relative w-20 h-20">
+                          <img
+                            src={formData.schemaImage}
+                            alt="Schema preview"
+                            className="w-full h-full object-contain border rounded-md"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white shadow-sm"
+                            onClick={() => setFormData(prev => ({ ...prev, schemaImage: '' }))}
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Supported formats: JPG, JPEG, PNG (max 5MB)
+                    </p>
+                  </div>
+                </div>
               </TabsContent>
               
               <TabsContent value="solution" className="mt-4">
