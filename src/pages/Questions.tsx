@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import RichTextEditor from '@/components/RichTextEditor';
 
 // Dummy data for questions
 const initialQuestions = [
@@ -184,6 +185,9 @@ const Questions = () => {
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   
+  // Additional state for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   // Search and filter questions
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -331,13 +335,18 @@ const Questions = () => {
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
-    if (!formData.title || !formData.company || !formData.topic || !formData.content) {
+    // Check if content is empty or only contains whitespace/HTML tags
+    const isContentEmpty = !formData.content || formData.content.replace(/<[^>]*>/g, '').trim() === '';
+    
+    if (!formData.title || !formData.company || !formData.topic || isContentEmpty) {
       toast({
         title: "Error",
         description: "Please fill all required fields",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
     
@@ -377,6 +386,7 @@ const Questions = () => {
     }
     
     setIsDialogOpen(false);
+    setIsSubmitting(false);
   };
   
   // Handle question deletion
@@ -392,6 +402,12 @@ const Questions = () => {
       title: "Success",
       description: "Question deleted successfully",
     });
+  };
+  
+  // Update the dialog close handler
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
+    setIsSubmitting(false);
   };
   
   return (
@@ -505,7 +521,7 @@ const Questions = () => {
       </div>
       
       {/* Create/Edit Question Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -634,16 +650,12 @@ const Questions = () => {
               
               <TabsContent value="content" className="mt-4">
                 <Label htmlFor="content">Question Content*</Label>
-                <Textarea
-                  id="content"
-                  name="content"
-                  value={formData.content || ''}
-                  onChange={handleChange}
-                  placeholder="Write your question content here..."
-                  className="mt-1 min-h-[200px]"
+                <RichTextEditor
+                  content={formData.content || ''}
+                  onChange={(content) => setFormData(prev => ({ ...prev, content }))}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  You can use markdown formatting for rich text.
+                  Use the toolbar above to format your content. You can add tables, lists, and apply various text styles.
                 </p>
               </TabsContent>
               
@@ -651,14 +663,13 @@ const Questions = () => {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="schema">Database Schema/ERD</Label>
-                    <Textarea
-                      id="schema"
-                      name="schema"
-                      value={formData.schema || ''}
-                      onChange={handleChange}
-                      placeholder="Describe the database schema or paste ERD details here..."
-                      className="mt-1 min-h-[200px]"
+                    <RichTextEditor
+                      content={formData.schema || ''}
+                      onChange={(content) => setFormData(prev => ({ ...prev, schema: content }))}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Use the toolbar above to format your schema content. You can add tables, lists, and apply various text styles.
+                    </p>
                   </div>
                   
                   <div>
@@ -699,14 +710,13 @@ const Questions = () => {
               
               <TabsContent value="solution" className="mt-4">
                 <Label htmlFor="solution">Sample Solution</Label>
-                <Textarea
-                  id="solution"
-                  name="solution"
-                  value={formData.solution || ''}
-                  onChange={handleChange}
-                  placeholder="Provide a sample SQL solution here..."
-                  className="mt-1 min-h-[200px] font-mono"
+                <RichTextEditor
+                  content={formData.solution || ''}
+                  onChange={(content) => setFormData(prev => ({ ...prev, solution: content }))}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Use the toolbar above to format your solution. You can add tables, lists, and apply various text styles. For SQL code, you can use the code formatting options.
+                </p>
               </TabsContent>
             </Tabs>
             
@@ -714,12 +724,16 @@ const Questions = () => {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setIsDialogOpen(false)}
+                onClick={handleDialogClose}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-primary-light hover:bg-primary">
-                {currentQuestion ? 'Update Question' : 'Create Question'}
+              <Button 
+                type="submit" 
+                className="bg-primary-light hover:bg-primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Saving...' : currentQuestion ? 'Update Question' : 'Create Question'}
               </Button>
             </DialogFooter>
           </form>
@@ -728,7 +742,7 @@ const Questions = () => {
       
       {/* Preview Question Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {currentQuestion?.title}
@@ -753,25 +767,37 @@ const Questions = () => {
             
             <TabsContent value="content" className="mt-4">
               <div className="p-4 border rounded-md bg-white">
-                <pre className="whitespace-pre-wrap font-normal">
-                  {currentQuestion?.content}
-                </pre>
+                <div 
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.content || '' }}
+                />
               </div>
             </TabsContent>
             
             <TabsContent value="schema" className="mt-4">
               <div className="p-4 border rounded-md bg-white">
-                <pre className="whitespace-pre-wrap font-normal">
-                  {currentQuestion?.schema || 'No schema information provided.'}
-                </pre>
+                <div 
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.schema || 'No schema information provided.' }}
+                />
+                {currentQuestion?.schemaImage && (
+                  <div className="mt-4">
+                    <img
+                      src={currentQuestion.schemaImage}
+                      alt="Schema diagram"
+                      className="max-w-full h-auto rounded-md border"
+                    />
+                  </div>
+                )}
               </div>
             </TabsContent>
             
             <TabsContent value="solution" className="mt-4">
-              <div className="p-4 border rounded-md bg-gray-50 font-mono text-sm">
-                <pre className="whitespace-pre-wrap">
-                  {currentQuestion?.solution || 'No solution provided.'}
-                </pre>
+              <div className="p-4 border rounded-md bg-gray-50">
+                <div 
+                  className="prose max-w-none font-mono text-sm"
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.solution || 'No solution provided.' }}
+                />
               </div>
             </TabsContent>
           </Tabs>

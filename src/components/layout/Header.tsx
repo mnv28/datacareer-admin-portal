@@ -1,6 +1,7 @@
-
 import React from 'react';
-import { Bell, LogOut, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/lib/auth-context';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Header = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center px-6 justify-between">
       <div>
@@ -18,11 +27,6 @@ const Header = () => {
       </div>
       
       <div className="flex items-center space-x-4">
-        <button className="p-2 rounded-full hover:bg-gray-100 relative">
-          <Bell size={20} className="text-gray-600" />
-          <span className="absolute top-1 right-1.5 w-2 h-2 bg-primary-accent rounded-full"></span>
-        </button>
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-full pl-2 pr-3 py-1.5">
@@ -43,7 +47,10 @@ const Header = () => {
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem 
+              className="text-red-600 focus:text-red-600"
+              onClick={handleLogout}
+            >
               <LogOut size={16} className="mr-2" />
               <span>Logout</span>
             </DropdownMenuItem>

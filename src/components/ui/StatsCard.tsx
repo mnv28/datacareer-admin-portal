@@ -23,7 +23,7 @@ const StatsCard = ({ title, value, icon, change, className }: StatsCardProps) =>
         <p className="text-sm font-medium text-gray-600">{title}</p>
         <p className="mt-1 text-2xl font-semibold">{value}</p>
         
-        {change && (
+        {/* {change && (
           <div className="mt-1 flex items-center text-xs">
             <span
               className={cn(
@@ -35,7 +35,7 @@ const StatsCard = ({ title, value, icon, change, className }: StatsCardProps) =>
             </span>
             <span className="ml-1 text-gray-500">from last month</span>
           </div>
-        )}
+        )} */}
       </div>
       
       <div className="p-2 rounded-lg bg-primary-lightest bg-opacity-20">
