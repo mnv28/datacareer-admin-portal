@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import AdminLayout from '@/components/layout/AdminLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import SearchFilter from '@/components/ui/SearchFilter';
@@ -31,93 +32,20 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import RichTextEditor from '@/components/RichTextEditor';
-
-// Dummy data for questions
-const initialQuestions = [
-  {
-    id: 1,
-    title: 'Advanced SQL Joins',
-    company: 'Google',
-    type: 'MySQL',
-    difficulty: 'Advanced',
-    topic: 'Joins',
-    status: 'active',
-    content: 'Write a query to join multiple tables...',
-    schema: 'Database schema information...',
-    solution: 'SELECT * FROM table1 JOIN table2...',
-  },
-  {
-    id: 2,
-    title: 'Window Functions',
-    company: 'Facebook',
-    type: 'PostgreSQL',
-    difficulty: 'Intermediate',
-    topic: 'Window Functions',
-    status: 'active',
-    content: 'Use window functions to analyze...',
-    schema: 'Database schema information...',
-    solution: 'SELECT *, ROW_NUMBER() OVER...',
-  },
-  {
-    id: 3,
-    title: 'Recursive CTEs',
-    company: 'Amazon',
-    type: 'PostgreSQL',
-    difficulty: 'Advanced',
-    topic: 'CTE',
-    status: 'inactive',
-    content: 'Write a recursive CTE to...',
-    schema: 'Database schema information...',
-    solution: 'WITH RECURSIVE cte AS...',
-  },
-  {
-    id: 4,
-    title: 'User Analytics',
-    company: 'Netflix',
-    type: 'MySQL',
-    difficulty: 'Intermediate',
-    topic: 'Analytics',
-    status: 'active',
-    content: 'Analyze user behavior with...',
-    schema: 'Database schema information...',
-    solution: 'SELECT user_id, COUNT(*) FROM...',
-  },
-  {
-    id: 5,
-    title: 'Basic Filtering',
-    company: 'Microsoft',
-    type: 'MySQL',
-    difficulty: 'Beginner',
-    topic: 'Filtering',
-    status: 'active',
-    content: 'Filter data based on conditions...',
-    schema: 'Database schema information...',
-    solution: 'SELECT * FROM users WHERE...',
-  },
-  {
-    id: 6,
-    title: 'Advanced Indexing',
-    company: 'Twitter',
-    type: 'PostgreSQL',
-    difficulty: 'Advanced',
-    topic: 'Indexing',
-    status: 'active',
-    content: 'Create and use advanced indexes...',
-    schema: 'Database schema information...',
-    solution: 'CREATE INDEX idx_name ON...',
-  },
-];
+import { RootState, AppDispatch } from '@/redux/store';
+import { 
+  fetchQuestions, 
+  createQuestion, 
+  updateQuestion, 
+  deleteQuestion,
+  setFilters,
+  Question
+} from '@/redux/Slices/questionSlice';
+import { fetchCompanies } from '@/redux/Slices/companySlice';
+import { fetchTopics } from '@/redux/Slices/topicSlice';
+import MonacoEditor from '@monaco-editor/react';
 
 // Filter options
-const companyOptions = [
-  { value: 'Google', label: 'Google' },
-  { value: 'Facebook', label: 'Facebook' },
-  { value: 'Amazon', label: 'Amazon' },
-  { value: 'Netflix', label: 'Netflix' },
-  { value: 'Microsoft', label: 'Microsoft' },
-  { value: 'Twitter', label: 'Twitter' },
-];
-
 const typeOptions = [
   { value: 'MySQL', label: 'MySQL' },
   { value: 'PostgreSQL', label: 'PostgreSQL' },
@@ -129,124 +57,67 @@ const difficultyOptions = [
   { value: 'Advanced', label: 'Advanced' },
 ];
 
-const topicOptions = [
-  { value: 'Joins', label: 'Joins' },
-  { value: 'Window Functions', label: 'Window Functions' },
-  { value: 'CTE', label: 'CTE' },
-  { value: 'Analytics', label: 'Analytics' },
-  { value: 'Filtering', label: 'Filtering' },
-  { value: 'Indexing', label: 'Indexing' },
-];
-
 const statusOptions = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
 ];
 
-interface Question {
-  id: number;
-  title: string;
-  company: string;
-  type: string;
-  difficulty: string;
-  topic: string;
-  status: string;
-  content: string;
-  schema: string;
-  schemaImage?: string;
-  solution: string;
-}
-
 const Questions = () => {
+  const editorRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const [questions, setQuestions] = useState<Question[]>(initialQuestions);
-  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>(initialQuestions);
+  const dispatch = useDispatch<AppDispatch>();
+  const { questions, loading, error, filters } = useSelector((state: RootState) => state.question);
+  const { companies } = useSelector((state: RootState) => state.company);
+  const { topics } = useSelector((state: RootState) => state.topic);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [formData, setFormData] = useState<Partial<Question>>({
     title: '',
-    company: '',
-    type: 'MySQL',
+    companyId: 0,
+    topicId: 0,
+    dbType: 'MySQL',
     difficulty: 'Beginner',
-    topic: '',
     status: 'active',
-    content: '',
-    schema: '',
-    schemaImage: '',
+    questionContent: '',
+    schemaContent: '',
+    schemaImage: null,
     solution: '',
+    createTableQuery: '',
+    addDataQuery: '',
   });
-  
-  // Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [companyFilter, setCompanyFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
   
   // Additional state for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Fetch questions, companies and topics on component mount
+  useEffect(() => {
+    dispatch(fetchQuestions(filters));
+    dispatch(fetchCompanies({}));
+    dispatch(fetchTopics({}));
+  }, [dispatch, filters]);
+  
   // Search and filter questions
   const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    filterQuestions(term, companyFilter, typeFilter, difficultyFilter, statusFilter);
+    dispatch(setFilters({ search: term }));
   };
   
-  const handleCompanyFilter = (company: string) => {
-    setCompanyFilter(company);
-    filterQuestions(searchTerm, company, typeFilter, difficultyFilter, statusFilter);
+  const handleCompanyFilter = (companyId: string) => {
+    dispatch(setFilters({ companyId }));
   };
   
-  const handleTypeFilter = (type: string) => {
-    setTypeFilter(type);
-    filterQuestions(searchTerm, companyFilter, type, difficultyFilter, statusFilter);
+  const handleTypeFilter = (dbType: string) => {
+    dispatch(setFilters({ dbType }));
   };
   
   const handleDifficultyFilter = (difficulty: string) => {
-    setDifficultyFilter(difficulty);
-    filterQuestions(searchTerm, companyFilter, typeFilter, difficulty, statusFilter);
+    dispatch(setFilters({ difficulty }));
   };
   
   const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    filterQuestions(searchTerm, companyFilter, typeFilter, difficultyFilter, status);
-  };
-  
-  const filterQuestions = (
-    term: string,
-    company: string,
-    type: string,
-    difficulty: string,
-    status: string
-  ) => {
-    let filtered = [...questions];
-    
-    if (term) {
-      filtered = filtered.filter(question => 
-        question.title.toLowerCase().includes(term.toLowerCase()) ||
-        question.topic.toLowerCase().includes(term.toLowerCase())
-      );
-    }
-    
-    if (company) {
-      filtered = filtered.filter(question => question.company === company);
-    }
-    
-    if (type) {
-      filtered = filtered.filter(question => question.type === type);
-    }
-    
-    if (difficulty) {
-      filtered = filtered.filter(question => question.difficulty === difficulty);
-    }
-    
-    if (status) {
-      filtered = filtered.filter(question => question.status === status);
-    }
-    
-    setFilteredQuestions(filtered);
+    dispatch(setFilters({ status }));
   };
   
   // Handle form data change
@@ -280,41 +151,60 @@ const Questions = () => {
         return;
       }
 
-      // Create a preview URL
-      const imageUrl = URL.createObjectURL(file);
-      setFormData(prev => ({ ...prev, schemaImage: imageUrl }));
+      // Store the actual file object for form submission
+      setFormData(prev => ({ ...prev, schemaImage: file }));
     }
   };
   
+  // Helper function to check if value is a File object
+  const isFile = (value: unknown): value is File => {
+    return value instanceof File;
+  };
+
+  // Helper function to get image URL
+  const getImageUrl = (image: string | File | null): string => {
+    if (!image) return '';
+    if (isFile(image)) return URL.createObjectURL(image);
+    return image as string;
+  };
+  
   // Open dialog for creating or editing a question
-  const openDialog = (question: Question | null = null) => {
+  const openDialog = async (question: Question | null = null) => {
     if (question) {
       setCurrentQuestion(question);
+      
+      // Parse the query JSON if it exists
+      let createTableQuery = '';
+      let addDataQuery = '';
+      try {
+        const queryData = JSON.parse(question.query);
+        createTableQuery = queryData.createTable || '';
+        addDataQuery = queryData.addData || '';
+      } catch (e) {
+        // If parsing fails, use the query as is
+        createTableQuery = question.query;
+      }
+      
       setFormData({
-        title: question.title,
-        company: question.company,
-        type: question.type,
-        difficulty: question.difficulty,
-        topic: question.topic,
-        status: question.status,
-        content: question.content,
-        schema: question.schema,
-        schemaImage: question.schemaImage,
-        solution: question.solution,
+        ...question,
+        createTableQuery,
+        addDataQuery,
       });
     } else {
       setCurrentQuestion(null);
       setFormData({
         title: '',
-        company: '',
-        type: 'MySQL',
+        companyId: 0,
+        topicId: 0,
+        dbType: 'MySQL',
         difficulty: 'Beginner',
-        topic: '',
         status: 'active',
-        content: '',
-        schema: '',
-        schemaImage: '',
+        questionContent: '',
+        schemaContent: '',
+        schemaImage: null,
         solution: '',
+        createTableQuery: '',
+        addDataQuery: '',
       });
     }
     setIsDialogOpen(true);
@@ -333,14 +223,14 @@ const Questions = () => {
   };
   
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     // Check if content is empty or only contains whitespace/HTML tags
-    const isContentEmpty = !formData.content || formData.content.replace(/<[^>]*>/g, '').trim() === '';
+    const isContentEmpty = !formData.questionContent || formData.questionContent.replace(/<[^>]*>/g, '').trim() === '';
     
-    if (!formData.title || !formData.company || !formData.topic || isContentEmpty) {
+    if (!formData.title || !formData.companyId || !formData.topicId || isContentEmpty) {
       toast({
         title: "Error",
         description: "Please fill all required fields",
@@ -350,58 +240,72 @@ const Questions = () => {
       return;
     }
     
-    if (currentQuestion) {
-      // Update existing question
-      const updatedQuestions = questions.map(question => 
-        question.id === currentQuestion.id ? { ...question, ...formData } : question
-      );
-      setQuestions(updatedQuestions);
-      filterQuestions(searchTerm, companyFilter, typeFilter, difficultyFilter, statusFilter);
-      toast({
-        title: "Success",
-        description: "Question updated successfully",
-      });
-    } else {
-      // Create new question
-      const newQuestion = {
-        id: questions.length + 1,
-        title: formData.title!,
-        company: formData.company!,
-        type: formData.type || 'MySQL',
-        difficulty: formData.difficulty || 'Beginner',
-        topic: formData.topic!,
-        status: formData.status || 'active',
-        content: formData.content!,
-        schema: formData.schema || '',
-        schemaImage: formData.schemaImage,
-        solution: formData.solution || '',
+    try {
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append('title', formData.title);
+      formDataToSubmit.append('companyId', formData.companyId.toString());
+      formDataToSubmit.append('topicId', formData.topicId.toString());
+      formDataToSubmit.append('dbType', formData.dbType);
+      formDataToSubmit.append('difficulty', formData.difficulty.toLowerCase());
+      formDataToSubmit.append('questionContent', formData.questionContent);
+      formDataToSubmit.append('schemaContent', formData.schemaContent);
+      if (formData.schemaImage && isFile(formData.schemaImage)) {
+        formDataToSubmit.append('schemaImage', formData.schemaImage);
+      }
+      formDataToSubmit.append('solution', formData.solution);
+      
+      // Combine the queries into JSON format
+      const queryJson = {
+        createTable: formData.createTableQuery || '',
+        addData: formData.addDataQuery || ''
       };
-      const updatedQuestions = [...questions, newQuestion];
-      setQuestions(updatedQuestions);
-      setFilteredQuestions(updatedQuestions);
+      formDataToSubmit.append('query', JSON.stringify(queryJson));
+
+      if (currentQuestion) {
+        // Update existing question
+        await dispatch(updateQuestion({ id: currentQuestion.id, data: formDataToSubmit }));
+        toast({
+          title: "Success",
+          description: "Question updated successfully",
+        });
+      } else {
+        // Create new question
+        await dispatch(createQuestion(formDataToSubmit));
+        toast({
+          title: "Success",
+          description: "Question created successfully",
+        });
+      }
+      setIsDialogOpen(false);
+    } catch (error) {
       toast({
-        title: "Success",
-        description: "Question created successfully",
+        title: "Error",
+        description: error.message || "Failed to save question",
+        variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsDialogOpen(false);
-    setIsSubmitting(false);
   };
   
   // Handle question deletion
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!currentQuestion) return;
     
-    const updatedQuestions = questions.filter(question => question.id !== currentQuestion.id);
-    setQuestions(updatedQuestions);
-    filterQuestions(searchTerm, companyFilter, typeFilter, difficultyFilter, statusFilter);
-    
-    setIsDeleteDialogOpen(false);
-    toast({
-      title: "Success",
-      description: "Question deleted successfully",
-    });
+    try {
+      await dispatch(deleteQuestion(currentQuestion.id));
+      setIsDeleteDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Question deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete question",
+        variant: "destructive",
+      });
+    }
   };
   
   // Update the dialog close handler
@@ -428,26 +332,26 @@ const Questions = () => {
         filters={[
           {
             name: "Company",
-            options: companyOptions,
-            value: companyFilter,
+            options: companies.map(company => ({ value: company.id.toString(), label: company.name })),
+            value: filters.companyId || '',
             onChange: handleCompanyFilter,
           },
           {
             name: "Type",
             options: typeOptions,
-            value: typeFilter,
+            value: filters.dbType || '',
             onChange: handleTypeFilter,
           },
           {
             name: "Difficulty",
             options: difficultyOptions,
-            value: difficultyFilter,
+            value: filters.difficulty || '',
             onChange: handleDifficultyFilter,
           },
           {
             name: "Status",
             options: statusOptions,
-            value: statusFilter,
+            value: filters.status,
             onChange: handleStatusFilter,
           },
         ]}
@@ -468,52 +372,66 @@ const Questions = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredQuestions.map((question) => (
-                <tr key={question.id} className="hover:bg-gray-50">
-                  <td className="font-medium">{question.title}</td>
-                  <td>{question.company}</td>
-                  <td>{question.type}</td>
-                  <td>
-                    <StatusBadge status={question.difficulty.toLowerCase()} />
-                  </td>
-                  <td>{question.topic}</td>
-                  <td>
-                    <StatusBadge status={question.status} />
-                  </td>
-                  <td>
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => openPreviewDialog(question)}
-                      >
-                        <Eye size={16} />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => openDialog(question)}
-                      >
-                        <Pencil size={16} />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => openDeleteDialog(question)}
-                        className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-4">
+                    Loading...
                   </td>
                 </tr>
-              ))}
-              {filteredQuestions.length === 0 && (
+              ) : error ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-4 text-red-500">
+                    {error}
+                  </td>
+                </tr>
+              ) : questions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-4 text-gray-500">
                     No questions found
                   </td>
                 </tr>
+              ) : (
+                questions.map((question) => (
+                  <tr key={question.id} className="hover:bg-gray-50">
+                 
+                    <td className="font-medium">{question.title}</td>
+                    <td>{question.company}</td>
+                    <td>{question.dbType}</td>
+                    <td>
+                      <StatusBadge status={question.difficulty.toLowerCase()} />
+                    </td>
+                    <td>{question.topic}</td>
+                    <td>
+                      <StatusBadge status={question.status} />
+                    </td>
+                    <td>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => openPreviewDialog(question)}
+                        >
+                          <Eye size={16} />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => openDialog(question)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => openDeleteDialog(question)}
+                          className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -551,36 +469,36 @@ const Questions = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="company">Company*</Label>
+                  <Label htmlFor="companyId">Company*</Label>
                   <select
-                    id="company"
-                    name="company"
-                    value={formData.company || ''}
+                    id="companyId"
+                    name="companyId"
+                    value={formData.companyId || ''}
                     onChange={handleChange}
                     className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
                   >
                     <option value="" disabled>Select company</option>
-                    {companyOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
+                    {companies.map(company => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
                       </option>
                     ))}
                   </select>
                 </div>
                 
                 <div>
-                  <Label htmlFor="topic">Topic*</Label>
+                  <Label htmlFor="topicId">Topic*</Label>
                   <select
-                    id="topic"
-                    name="topic"
-                    value={formData.topic || ''}
+                    id="topicId"
+                    name="topicId"
+                    value={formData.topicId || ''}
                     onChange={handleChange}
                     className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
                   >
                     <option value="" disabled>Select topic</option>
-                    {topicOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
+                    {topics.map(topic => (
+                      <option key={topic.id} value={topic.id}>
+                        {topic.name}
                       </option>
                     ))}
                   </select>
@@ -589,11 +507,11 @@ const Questions = () => {
               
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="type">DB Type</Label>
+                  <Label htmlFor="dbType">DB Type</Label>
                   <select
-                    id="type"
-                    name="type"
-                    value={formData.type || 'MySQL'}
+                    id="dbType"
+                    name="dbType"
+                    value={formData.dbType || 'MySQL'}
                     onChange={handleChange}
                     className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
                   >
@@ -642,17 +560,18 @@ const Questions = () => {
             </div>
             
             <Tabs defaultValue="content">
-              <TabsList className="grid grid-cols-3">
+              <TabsList className="grid grid-cols-4">
                 <TabsTrigger value="content">Question Content</TabsTrigger>
                 <TabsTrigger value="schema">Schema/ERD</TabsTrigger>
+                <TabsTrigger value="queries">Queries</TabsTrigger>
                 <TabsTrigger value="solution">Solution</TabsTrigger>
               </TabsList>
               
               <TabsContent value="content" className="mt-4">
-                <Label htmlFor="content">Question Content*</Label>
+                <Label htmlFor="questionContent">Question Content*</Label>
                 <RichTextEditor
-                  content={formData.content || ''}
-                  onChange={(content) => setFormData(prev => ({ ...prev, content }))}
+                  content={formData.questionContent || ''}
+                  onChange={(content) => setFormData(prev => ({ ...prev, questionContent: content }))}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Use the toolbar above to format your content. You can add tables, lists, and apply various text styles.
@@ -662,10 +581,10 @@ const Questions = () => {
               <TabsContent value="schema" className="mt-4">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="schema">Database Schema/ERD</Label>
+                    <Label htmlFor="schemaContent">Database Schema/ERD</Label>
                     <RichTextEditor
-                      content={formData.schema || ''}
-                      onChange={(content) => setFormData(prev => ({ ...prev, schema: content }))}
+                      content={formData.schemaContent || ''}
+                      onChange={(content) => setFormData(prev => ({ ...prev, schemaContent: content }))}
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Use the toolbar above to format your schema content. You can add tables, lists, and apply various text styles.
@@ -685,7 +604,7 @@ const Questions = () => {
                       {formData.schemaImage && (
                         <div className="relative w-20 h-20">
                           <img
-                            src={formData.schemaImage}
+                            src={getImageUrl(formData.schemaImage)}
                             alt="Schema preview"
                             className="w-full h-full object-contain border rounded-md"
                           />
@@ -694,7 +613,7 @@ const Questions = () => {
                             variant="ghost"
                             size="icon"
                             className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white shadow-sm"
-                            onClick={() => setFormData(prev => ({ ...prev, schemaImage: '' }))}
+                            onClick={() => setFormData(prev => ({ ...prev, schemaImage: null }))}
                           >
                             <X size={14} />
                           </Button>
@@ -703,6 +622,60 @@ const Questions = () => {
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       Supported formats: JPG, JPEG, PNG (max 5MB)
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="queries" className="mt-4">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="createTable">Create Table Query</Label>
+                    <div className="mt-1 overflow-hidden">
+                      <MonacoEditor
+                        height="200px"
+                        language="sql"
+                        theme="vs-light"
+                        value={formData.createTableQuery || ''}
+                        onChange={(value) => setFormData(prev => ({ ...prev, createTableQuery: value || '' }))}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          lineNumbers: 'on',
+                          roundedSelection: false,
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                        }}
+                      />
+                      
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Write the CREATE TABLE query here. Example: CREATE TABLE table_name (column1 datatype, column2 datatype);
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="addData">Insert Data Query</Label>
+                    <div className="mt-1 border rounded-md overflow-hidden">
+                      <MonacoEditor
+                        height="200px"
+                        language="sql"
+                        theme="vs-light"
+                    
+                        value={formData.addDataQuery || ''}
+                        onChange={(value) => setFormData(prev => ({ ...prev, addDataQuery: value || '' }))}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          lineNumbers: 'on',
+                          roundedSelection: false,
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Write the INSERT queries here. Example: INSERT INTO table_name (column1, column2) VALUES (value1, value2);
                     </p>
                   </div>
                 </div>
@@ -750,18 +723,19 @@ const Questions = () => {
             <div className="flex flex-wrap gap-2 mt-2">
               <StatusBadge status={currentQuestion?.difficulty.toLowerCase() || ''} />
               <span className="status-badge bg-gray-100 text-gray-800">
-                {currentQuestion?.type}
+                {currentQuestion?.dbType}
               </span>
               <span className="status-badge bg-blue-100 text-blue-800">
-                {currentQuestion?.company}
+                {currentQuestion?.companyId}
               </span>
             </div>
           </DialogHeader>
           
           <Tabs defaultValue="content">
-            <TabsList className="grid grid-cols-3">
+            <TabsList className="grid grid-cols-4">
               <TabsTrigger value="content">Question</TabsTrigger>
               <TabsTrigger value="schema">Schema</TabsTrigger>
+              <TabsTrigger value="queries">Queries</TabsTrigger>
               <TabsTrigger value="solution">Solution</TabsTrigger>
             </TabsList>
             
@@ -769,7 +743,7 @@ const Questions = () => {
               <div className="p-4 border rounded-md bg-white">
                 <div 
                   className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: currentQuestion?.content || '' }}
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.questionContent || '' }}
                 />
               </div>
             </TabsContent>
@@ -778,17 +752,25 @@ const Questions = () => {
               <div className="p-4 border rounded-md bg-white">
                 <div 
                   className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: currentQuestion?.schema || 'No schema information provided.' }}
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.schemaContent || 'No schema information provided.' }}
                 />
                 {currentQuestion?.schemaImage && (
                   <div className="mt-4">
                     <img
-                      src={currentQuestion.schemaImage}
+                      src={getImageUrl(currentQuestion.schemaImage)}
                       alt="Schema diagram"
                       className="max-w-full h-auto rounded-md border"
                     />
                   </div>
                 )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="queries" className="mt-4">
+              <div className="p-4 border rounded-md bg-gray-50">
+                <pre className="whitespace-pre-wrap font-mono text-sm">
+                  {currentQuestion?.query || 'No queries provided.'}
+                </pre>
               </div>
             </TabsContent>
             

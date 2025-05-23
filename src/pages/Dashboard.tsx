@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import StatsCard from '@/components/ui/StatsCard';
 import PageHeader from '@/components/ui/PageHeader';
@@ -17,6 +16,9 @@ import {
   Cell,
   Legend
 } from 'recharts';
+import { useDispatch, useSelector } from "react-redux";
+import { fetchSummaryCounts } from "@/redux/Slices/summarySlice";
+import type { RootState, AppDispatch } from "@/redux/store";
 
 // Dummy data for charts
 const difficultyData = [
@@ -42,6 +44,13 @@ const recentSubmissions = [
 ];
 
 const Dashboard = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const summary = useSelector((state: RootState) => state.summary);
+
+  useEffect(() => {
+    dispatch(fetchSummaryCounts());
+  }, [dispatch]);
+
   return (
     <AdminLayout>
       <PageHeader
@@ -52,25 +61,25 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
           title="Total Companies"
-          value="35"
+          value={summary?.loading ? "Loading..." : summary?.counts?.totalCompanies?.toString() || "0"}
           icon={<Building2 size={24} className="text-primary" />}
           change={{ value: "12%", positive: true }}
         />
         <StatsCard
           title="Total Questions"
-          value="90"
+          value={summary?.loading ? "Loading..." : summary?.counts?.totalQuestions?.toString() || "0"}
           icon={<FileQuestion size={24} className="text-primary-light" />}
           change={{ value: "8%", positive: true }}
         />
         <StatsCard
           title="Registered Users"
-          value="1,245"
+          value={summary?.loading ? "Loading..." : summary?.counts?.totalUsers?.toString() || "0"}
           icon={<Users size={24} className="text-primary-accent" />}
           change={{ value: "24%", positive: true }}
         />
         <StatsCard
           title="Total Submissions"
-          value="3,782"
+          value={summary?.loading ? "Loading..." : summary?.counts?.totalSubmissions?.toString() || "0"}
           icon={<FileCheck size={24} className="text-primary-lightest" />}
           change={{ value: "5%", positive: true }}
         />

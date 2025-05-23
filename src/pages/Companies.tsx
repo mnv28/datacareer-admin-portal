@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import SearchFilter from '@/components/ui/SearchFilter';
@@ -13,12 +13,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -27,28 +21,19 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchDomains } from '@/redux/Slices/domainSlice';
+import { fetchCompanies, setFilters, type Company, deleteCompany, updateCompany, createCompany } from '@/redux/Slices/companySlice';
+import type { RootState, AppDispatch } from '@/redux/store';
+import type { Domain } from '@/redux/Slices/domainSlice';
 
-// Initial domains data (this should come from the Domains page in a real app)
-const domainOptions = [
-  { value: 'Retail', label: 'Retail' },
-  { value: 'FMCG', label: 'FMCG' },
-  { value: 'Loyalty', label: 'Loyalty' },
-  { value: 'Customer Analytics', label: 'Customer Analytics' },
-];
-
-// Dummy data for companies
-const initialCompanies = [
-  { id: 1, name: 'Google', domains: ['Retail', 'Customer Analytics'], category: 'Tech', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 2, name: 'Facebook', domains: ['Customer Analytics'], category: 'Social Media', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 3, name: 'Amazon', domains: ['Retail', 'FMCG'], category: 'E-commerce', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 4, name: 'Netflix', domains: ['Customer Analytics'], category: 'Entertainment', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 5, name: 'Microsoft', domains: ['Retail', 'Loyalty'], category: 'Tech', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 6, name: 'Twitter', domains: ['Social Media'], category: 'Social Media', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 7, name: 'Airbnb', domains: ['Travel'], category: 'Travel', status: 'inactive', logo: 'https://via.placeholder.com/150' },
-  { id: 8, name: 'Spotify', domains: ['Entertainment'], category: 'Music', status: 'active', logo: 'https://via.placeholder.com/150' },
-  { id: 9, name: 'Uber', domains: ['Transportation'], category: 'Transportation', status: 'inactive', logo: 'https://via.placeholder.com/150' },
-  { id: 10, name: 'LinkedIn', domains: ['Professional'], category: 'Professional', status: 'active', logo: 'https://via.placeholder.com/150' },
-];
+interface CompanyFormData {
+  name: string;
+  domains: number[];
+  category: string;
+  status: string;
+  logo: string | File;
+}
 
 const categoryOptions = [
   { value: 'Tech', label: 'Tech' },
@@ -66,82 +51,55 @@ const statusOptions = [
   { value: 'inactive', label: 'Inactive' },
 ];
 
-interface Company {
-  id: number;
-  name: string;
-  domains: string[];
-  category: string;
-  status: string;
-  logo: string;
-}
-
 const Companies = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
-  const [companies, setCompanies] = useState<Company[]>(initialCompanies);
-  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>(initialCompanies);
+  const { domains, loading: domainsLoading } = useSelector((state: RootState) => state.domain);
+  const { companies, loading: companiesLoading, filters, error } = useSelector((state: RootState) => state.company);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
-  const [formData, setFormData] = useState<Partial<Company>>({
+  const [formData, setFormData] = useState<CompanyFormData>({
     name: '',
     domains: [],
     category: '',
     status: 'active',
     logo: '',
   });
+  const [logoPreview, setLogoPreview] = useState<string>('');
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  
-  // Filter companies based on search term and filters
+  // Fetch domains and companies when component mounts
+  useEffect(() => {
+    dispatch(fetchDomains());
+    dispatch(fetchCompanies(filters));
+  }, [dispatch, filters]);
+
+  // Handle search and filters
   const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    filterCompanies(term, categoryFilter, statusFilter);
+    dispatch(setFilters({ search: term }));
   };
   
   const handleCategoryFilter = (category: string) => {
-    setCategoryFilter(category);
-    filterCompanies(searchTerm, category, statusFilter);
+    dispatch(setFilters({ category }));
   };
   
   const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    filterCompanies(searchTerm, categoryFilter, status);
-  };
-  
-  const filterCompanies = (term: string, category: string, status: string) => {
-    let filtered = [...companies];
-    
-    if (term) {
-      filtered = filtered.filter(company => 
-        company.name.toLowerCase().includes(term.toLowerCase())
-      );
-    }
-    
-    if (category) {
-      filtered = filtered.filter(company => company.category === category);
-    }
-    
-    if (status) {
-      filtered = filtered.filter(company => company.status === status);
-    }
-    
-    setFilteredCompanies(filtered);
-    return filtered;
+    dispatch(setFilters({ status }));
   };
   
   // Handle form data change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'domains') {
-      setFormData({ ...formData, domains: value ? value.split(',') : [] });
+      // Convert string values to numbers
+      const domainIds = value ? value.split(',').map(id => parseInt(id, 10)) : [];
+      setFormData({ ...formData, domains: domainIds });
     } else {
       setFormData({ ...formData, [name]: value });
     }
   };
 
-  const handleDomainsChange = (domains: string[]) => {
+  const handleDomainsChange = (domains: number[]) => {
     setFormData(prev => ({ ...prev, domains: domains }));
   };
   
@@ -151,11 +109,12 @@ const Companies = () => {
       setCurrentCompany(company);
       setFormData({
         name: company.name,
-        domains: Array.isArray(company.domains) ? company.domains : [],
+        domains: company.Domains.map(d => d.id),
         category: company.category,
         status: company.status,
-        logo: company.logo || '',
+        logo: company.logo,
       });
+      setLogoPreview(company.logo);
     } else {
       setCurrentCompany(null);
       setFormData({
@@ -165,6 +124,7 @@ const Companies = () => {
         status: 'active',
         logo: '',
       });
+      setLogoPreview('');
     }
     setIsDialogOpen(true);
   };
@@ -200,12 +160,13 @@ const Companies = () => {
 
       // Create a preview URL
       const imageUrl = URL.createObjectURL(file);
-      setFormData(prev => ({ ...prev, logo: imageUrl }));
+      setLogoPreview(imageUrl);
+      setFormData(prev => ({ ...prev, logo: file }));
     }
   };
   
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.domains?.length || !formData.category || !formData.logo) {
@@ -216,53 +177,85 @@ const Companies = () => {
       });
       return;
     }
-    
-    if (currentCompany) {
-      // Update existing company
-      const updatedCompanies = companies.map(company => 
-        company.id === currentCompany.id ? { ...company, ...formData } : company
-      );
-      setCompanies(updatedCompanies);
-      filterCompanies(searchTerm, categoryFilter, statusFilter);
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('domains', JSON.stringify(formData.domains));
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('status', formData.status || 'active');
+
+      // If logo is a File object (from file input)
+      if (formData.logo instanceof File) {
+        formDataToSend.append('logo', formData.logo);
+      } else if (typeof formData.logo === 'string' && formData.logo.startsWith('data:')) {
+        // If logo is a data URL, convert it to a File
+        const response = await fetch(formData.logo);
+        const blob = await response.blob();
+        const file = new File([blob], 'logo.png', { type: blob.type });
+        formDataToSend.append('logo', file);
+      } else if (typeof formData.logo === 'string') {
+        // If logo is a URL string, fetch it and convert to File
+        const response = await fetch(formData.logo);
+        const blob = await response.blob();
+        const file = new File([blob], 'logo.png', { type: blob.type });
+        formDataToSend.append('logo', file);
+      }
+
+      if (currentCompany) {
+        // Update existing company
+        const result = await dispatch(updateCompany({ 
+          id: currentCompany.id, 
+          formData: formDataToSend 
+        })).unwrap();
+
+        console.log('Update result:', result);
+        
+        toast({
+          title: "Success",
+          description: "Company updated successfully",
+        });
+      } else {
+        // Create new company
+        const result = await dispatch(createCompany(formDataToSend)).unwrap();
+        
+        console.log('Create result:', result);
+        
+        toast({
+          title: "Success",
+          description: "Company created successfully",
+        });
+      }
+      
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Submit error:', error);
       toast({
-        title: "Success",
-        description: "Company updated successfully",
-      });
-    } else {
-      // Create new company
-      const newCompany = {
-        id: companies.length + 1,
-        name: formData.name!,
-        domains: formData.domains!,
-        category: formData.category!,
-        status: formData.status || 'active',
-        logo: formData.logo || 'https://via.placeholder.com/150',
-      };
-      const updatedCompanies = [...companies, newCompany];
-      setCompanies(updatedCompanies);
-      setFilteredCompanies(updatedCompanies);
-      toast({
-        title: "Success",
-        description: "Company created successfully",
+        title: "Error",
+        description: error as string || "Failed to save company",
+        variant: "destructive",
       });
     }
-    
-    setIsDialogOpen(false);
   };
   
   // Handle company deletion
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!currentCompany) return;
     
-    const updatedCompanies = companies.filter(company => company.id !== currentCompany.id);
-    setCompanies(updatedCompanies);
-    filterCompanies(searchTerm, categoryFilter, statusFilter);
-    
-    setIsDeleteDialogOpen(false);
-    toast({
-      title: "Success",
-      description: "Company deleted successfully",
-    });
+    try {
+      await dispatch(deleteCompany(currentCompany.id)).unwrap();
+      toast({
+        title: "Success",
+        description: "Company deleted successfully",
+      });
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error as string || "Failed to delete company",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
@@ -284,13 +277,13 @@ const Companies = () => {
           {
             name: "Category",
             options: categoryOptions,
-            value: categoryFilter,
+            value: filters.category,
             onChange: handleCategoryFilter,
           },
           {
             name: "Status",
             options: statusOptions,
-            value: statusFilter,
+            value: filters.status,
             onChange: handleStatusFilter,
           },
         ]}
@@ -309,62 +302,77 @@ const Companies = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredCompanies.map((company) => (
-                <tr key={company.id} className="hover:bg-gray-50">
-                  <td className="pl-4 pr-6 py-3 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-gray-100 rounded-md flex-shrink-0 mr-3">
-                        {company.logo && (
-                          <img 
-                            src={company.logo} 
-                            alt={`${company.name} logo`}
-                            className="w-full h-full object-contain rounded-md"
-                          />
-                        )}
-                      </div>
-                      <span className="font-medium">{company.name}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex flex-wrap gap-1">
-                      {company.domains.map((domain) => (
-                        <Badge key={domain} variant="secondary">
-                          {domain}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-                  <td>{company.category}</td>
-                  <td>
-                    <StatusBadge status={company.status} />
-                  </td>
-                  <td>
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => openDialog(company)}
-                      >
-                        <Pencil size={16} />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => openDeleteDialog(company)}
-                        className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
+              {companiesLoading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-4">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   </td>
                 </tr>
-              ))}
-              {filteredCompanies.length === 0 && (
+              ) : error ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-4 text-red-500">
+                    {error}
+                  </td>
+                </tr>
+              ) : companies.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-4 text-gray-500">
                     No companies found
                   </td>
                 </tr>
+              ) : (
+                companies.map((company) => (
+                  <tr key={company.id} className="hover:bg-gray-50">
+                    <td className="pl-4 pr-6 py-3 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-gray-100 rounded-md flex-shrink-0 mr-3">
+                          {company.logo && (
+                            <img 
+                              src={company.logo} 
+                              alt={`${company.name} logo`}
+                              className="w-full h-full object-contain rounded-md"
+                            />
+                          )}
+                        </div>
+                        <span className="font-medium">{company.name}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex flex-wrap gap-1">
+                        {company.Domains.map((domain) => (
+                          <Badge key={domain.id} variant="secondary">
+                            {domain.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </td>
+                    <td>{company.category}</td>
+                    <td>
+                      <StatusBadge status={company.status} />
+                    </td>
+                    <td>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => openDialog(company)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => openDeleteDialog(company)}
+                          className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -408,10 +416,13 @@ const Companies = () => {
                       variant="outline"
                       role="combobox"
                       className="w-full justify-between mt-1"
+                      disabled={domainsLoading}
                     >
-                      {formData.domains?.length > 0
-                        ? `${formData.domains.length} domains selected`
-                        : "Select domains..."}
+                      {domainsLoading 
+                        ? "Loading domains..."
+                        : formData.domains?.length > 0
+                          ? `${formData.domains.length} domains selected`
+                          : "Select domains..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -421,24 +432,24 @@ const Companies = () => {
                       <CommandList>
                         <CommandEmpty>No domain found.</CommandEmpty>
                         <CommandGroup>
-                          {domainOptions.map((domain) => (
+                          {domains.map((domain) => (
                             <CommandItem
-                              key={domain.value}
+                              key={domain.id}
                               onSelect={() => {
                                 const currentDomains = formData.domains || [];
-                                const newDomains = currentDomains.includes(domain.value)
-                                  ? currentDomains.filter((d) => d !== domain.value)
-                                  : [...currentDomains, domain.value];
+                                const newDomains = currentDomains.includes(domain.id)
+                                  ? currentDomains.filter((d) => d !== domain.id)
+                                  : [...currentDomains, domain.id];
                                 handleDomainsChange(newDomains);
                               }}
                             >
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  formData.domains?.includes(domain.value) ? "opacity-100" : "opacity-0"
+                                  formData.domains?.includes(domain.id) ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {domain.label}
+                              {domain.name}
                             </CommandItem>
                           ))}
                         </CommandGroup>
@@ -448,11 +459,14 @@ const Companies = () => {
                 </Popover>
                 {formData.domains?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {formData.domains.map((domain) => (
-                      <Badge key={domain} variant="secondary">
-                        {domain}
-                      </Badge>
-                    ))}
+                    {formData.domains.map((domainId) => {
+                      const domain = domains.find(d => d.id === domainId);
+                      return domain ? (
+                        <Badge key={domain.id} variant="secondary">
+                          {domain.name}
+                        </Badge>
+                      ) : null;
+                    })}
                   </div>
                 )}
               </div>
@@ -504,10 +518,10 @@ const Companies = () => {
                     onChange={handleLogoChange}
                     className="w-full"
                   />
-                  {formData.logo && (
+                  {logoPreview && (
                     <div className="relative w-20 h-20">
                       <img
-                        src={formData.logo}
+                        src={logoPreview}
                         alt="Logo preview"
                         className="w-full h-full object-contain border rounded-md"
                       />
@@ -516,7 +530,10 @@ const Companies = () => {
                         variant="ghost"
                         size="icon"
                         className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white shadow-sm"
-                        onClick={() => setFormData(prev => ({ ...prev, logo: '' }))}
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, logo: '' }));
+                          setLogoPreview('');
+                        }}
                       >
                         <X size={14} />
                       </Button>

@@ -1,43 +1,71 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { loginUser, clearError } from "@/redux/Slices/authSlice";
+import type { RootState, AppDispatch } from "@/redux/store";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const [passwordError, setPasswordError] = useState("");
+  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+
+    if (isAuthenticated) {
+     
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: error,
+      });
+    }
+  }, [error, toast]);
+
+  const validatePassword = (password: string) => {
+    if (password.length < 6) {
+      setPasswordError("Password must be at least 6 characters long");
+      return false;
+    }
+    setPasswordError("");
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    dispatch(clearError());
+
+    if (!validatePassword(password)) {
+      return;
+    }
 
     try {
-      const success = await login(email, password);
-      if (success) {
-        navigate("/dashboard");
-      } else {
+ 
+      const resultAction = await dispatch(loginUser({ email, password }));
+    
+      if (loginUser.fulfilled.match(resultAction)) {
+     
         toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: "Invalid email or password",
+          title: "Success",
+          description: "Login successful!",
         });
       }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "An error occurred during login",
-      });
-    } finally {
-      setIsLoading(false);
+      console.error("Login error:", error);
     }
   };
 
@@ -70,16 +98,22 @@ export default function Login() {
                 type="password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  validatePassword(e.target.value);
+                }}
                 required
               />
+              {passwordError && (
+                <p className="text-sm text-red-500">{passwordError}</p>
+              )}
             </div>
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? "Logging in..." : "Login"}
+              {loading ? "Logging in..." : "Login"}
             </Button>
           </form>
         </CardContent>

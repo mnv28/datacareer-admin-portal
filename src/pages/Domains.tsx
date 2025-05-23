@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import SearchFilter from '@/components/ui/SearchFilter';
@@ -16,31 +16,28 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-
-// Initial domains data
-const initialDomains = [
-  { id: 1, name: 'Retail', description: 'Retail industry domain', status: 'active' },
-  { id: 2, name: 'FMCG', description: 'Fast Moving Consumer Goods domain', status: 'active' },
-  { id: 3, name: 'Loyalty', description: 'Customer Loyalty domain', status: 'active' },
-  { id: 4, name: 'Customer Analytics', description: 'Customer Analytics domain', status: 'active' },
-];
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+  fetchDomains, 
+  type Domain, 
+  createDomain, 
+  fetchDomainById, 
+  updateDomain, 
+  deleteDomain,
+  setFilters,
+  clearFilters 
+} from '@/redux/Slices/domainSlice';
+import type { RootState, AppDispatch } from '@/redux/store';
 
 const statusOptions = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
 ];
 
-interface Domain {
-  id: number;
-  name: string;
-  description: string;
-  status: string;
-}
-
 const Domains = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
-  const [domains, setDomains] = useState<Domain[]>(initialDomains);
-  const [filteredDomains, setFilteredDomains] = useState<Domain[]>(initialDomains);
+  const { domains, loading, error, filters = { search: '', status: '' } } = useSelector((state: RootState) => state.domain);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentDomain, setCurrentDomain] = useState<Domain | null>(null);
@@ -50,35 +47,19 @@ const Domains = () => {
     status: 'active',
   });
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  // Fetch domains when component mounts or filters change
+  useEffect(() => {
+    dispatch(fetchDomains(filters));
+  }, [dispatch, filters]);
   
-  // Filter domains based on search term and filters
+  // Handle search
   const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    filterDomains(term, statusFilter);
+    dispatch(setFilters({ search: term }));
   };
   
+  // Handle status filter
   const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    filterDomains(searchTerm, status);
-  };
-  
-  const filterDomains = (term: string, status: string) => {
-    let filtered = [...domains];
-    
-    if (term) {
-      filtered = filtered.filter(domain => 
-        domain.name.toLowerCase().includes(term.toLowerCase()) || 
-        domain.description.toLowerCase().includes(term.toLowerCase())
-      );
-    }
-    
-    if (status) {
-      filtered = filtered.filter(domain => domain.status === status);
-    }
-    
-    setFilteredDomains(filtered);
+    dispatch(setFilters({ status }));
   };
   
   // Handle form data change
@@ -88,14 +69,24 @@ const Domains = () => {
   };
   
   // Open dialog for creating or editing a domain
-  const openDialog = (domain: Domain | null = null) => {
+  const openDialog = async (domain: Domain | null = null) => {
     if (domain) {
-      setCurrentDomain(domain);
-      setFormData({
-        name: domain.name,
-        description: domain.description,
-        status: domain.status,
-      });
+      try {
+        const result = await dispatch(fetchDomainById(domain.id)).unwrap();
+        setCurrentDomain(result);
+        setFormData({
+          name: result.name,
+          description: result.description,
+          status: result.status,
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error as string || "Failed to fetch domain details",
+          variant: "destructive",
+        });
+        return;
+      }
     } else {
       setCurrentDomain(null);
       setFormData({
@@ -106,15 +97,13 @@ const Domains = () => {
     }
     setIsDialogOpen(true);
   };
-  
-  // Open delete confirmation dialog
+
   const openDeleteDialog = (domain: Domain) => {
     setCurrentDomain(domain);
     setIsDeleteDialogOpen(true);
   };
   
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.description) {
@@ -126,50 +115,64 @@ const Domains = () => {
       return;
     }
     
-    if (currentDomain) {
-      // Update existing domain
-      const updatedDomains = domains.map(domain => 
-        domain.id === currentDomain.id ? { ...domain, ...formData } : domain
-      );
-      setDomains(updatedDomains);
-      filterDomains(searchTerm, statusFilter);
+    try {
+      if (currentDomain) {
+        // Update existing domain
+        const result = await dispatch(updateDomain({
+          id: currentDomain.id,
+          domainData: {
+            name: formData.name,
+            description: formData.description,
+            status: formData.status || 'active'
+          }
+        })).unwrap();
+        
+        toast({
+          title: "Success",
+          description: "Domain updated successfully",
+        });
+      } else {
+        // Create new domain
+        const result = await dispatch(createDomain({
+          name: formData.name,
+          description: formData.description,
+          status: formData.status || 'active'
+        })).unwrap();
+        
+        toast({
+          title: "Success",
+          description: "Domain created successfully",
+        });
+      }
+      
+      setIsDialogOpen(false);
+    } catch (error) {
       toast({
-        title: "Success",
-        description: "Domain updated successfully",
-      });
-    } else {
-      // Create new domain
-      const newDomain = {
-        id: domains.length + 1,
-        name: formData.name!,
-        description: formData.description!,
-        status: formData.status || 'active',
-      };
-      const updatedDomains = [...domains, newDomain];
-      setDomains(updatedDomains);
-      setFilteredDomains(updatedDomains);
-      toast({
-        title: "Success",
-        description: "Domain created successfully",
+        title: "Error",
+        description: error as string || "Failed to save domain",
+        variant: "destructive",
       });
     }
-    
-    setIsDialogOpen(false);
   };
   
   // Handle domain deletion
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!currentDomain) return;
     
-    const updatedDomains = domains.filter(domain => domain.id !== currentDomain.id);
-    setDomains(updatedDomains);
-    filterDomains(searchTerm, statusFilter);
-    
-    setIsDeleteDialogOpen(false);
-    toast({
-      title: "Success",
-      description: "Domain deleted successfully",
-    });
+    try {
+      await dispatch(deleteDomain(currentDomain.id)).unwrap();
+      toast({
+        title: "Success",
+        description: "Domain deleted successfully",
+      });
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error as string || "Failed to delete domain",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
@@ -191,7 +194,7 @@ const Domains = () => {
           {
             name: "Status",
             options: statusOptions,
-            value: statusFilter,
+            value: filters.status,
             onChange: handleStatusFilter,
           },
         ]}
@@ -209,42 +212,57 @@ const Domains = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredDomains.map((domain) => (
-                <tr key={domain.id} className="hover:bg-gray-50">
-                  <td className="pl-4 pr-6 py-3 whitespace-nowrap">
-                    <span className="font-medium">{domain.name}</span>
-                  </td>
-                  <td>{domain.description}</td>
-                  <td>
-                    <StatusBadge status={domain.status} />
-                  </td>
-                  <td>
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => openDialog(domain)}
-                      >
-                        <Pencil size={16} />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => openDeleteDialog(domain)}
-                        className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-4">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   </td>
                 </tr>
-              ))}
-              {filteredDomains.length === 0 && (
+              ) : error ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-4 text-red-500">
+                    {error}
+                  </td>
+                </tr>
+              ) : domains.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center py-4 text-gray-500">
                     No domains found
                   </td>
                 </tr>
+              ) : (
+                domains.map((domain) => (
+                  <tr key={domain.id} className="hover:bg-gray-50">
+                    <td className="pl-4 pr-6 py-3 whitespace-nowrap">
+                      <span className="font-medium">{domain.name}</span>
+                    </td>
+                    <td>{domain.description}</td>
+                    <td>
+                      <StatusBadge status={domain.status} />
+                    </td>
+                    <td>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => openDialog(domain)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => openDeleteDialog(domain)}
+                          className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

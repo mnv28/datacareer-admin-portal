@@ -2,6 +2,8 @@ import React from 'react';
 import { LogOut, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
+import { useDispatch } from 'react-redux';
+import { logout } from '@/redux/Slices/authSlice';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -13,10 +15,17 @@ import {
 
 const Header = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const dispatch = useDispatch();
+  const { logout: authLogout } = useAuth();
 
   const handleLogout = () => {
-    logout();
+ 
+    dispatch(logout());
+ 
+    authLogout();
+   
+    localStorage.removeItem('token');
+
     navigate('/login');
   };
 
