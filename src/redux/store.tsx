@@ -6,6 +6,7 @@ import companyReducer from './Slices/companySlice';
 import questionReducer from './Slices/questionSlice';
 import topicReducer from './Slices/topicSlice';
 import submissionReducer from './Slices/submissionSlice';
+import userReducer from './Slices/userSlice';
 import { User } from '../types/auth';
 import { Company } from './Slices/companySlice';
 
@@ -115,6 +116,22 @@ export interface RootState {
             search: string;
         };
     };
+    user: {
+        users: Array<{
+            id: number;
+            name: string;
+            email: string;
+            totalAttempted: number;
+            lastLogin: string | null;
+            status: string;
+        }>;
+        loading: boolean;
+        error: string | null;
+        filters: {
+            search: string;
+            status: string;
+        };
+    };
 }
 
 export const store = configureStore({
@@ -126,6 +143,7 @@ export const store = configureStore({
         question: questionReducer,
         topic: topicReducer,
         submission: submissionReducer,
+        user: userReducer,
     },
     preloadedState: {
         summary: {
@@ -181,6 +199,15 @@ export const store = configureStore({
                 dbType: '',
                 status: '',
                 search: ''
+            }
+        },
+        user: {
+            users: [],
+            loading: false,
+            error: null,
+            filters: {
+                search: '',
+                status: ''
             }
         }
     }

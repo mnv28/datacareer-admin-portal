@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import SearchFilter from '@/components/ui/SearchFilter';
@@ -21,65 +20,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-
-// Dummy data for users
-const initialUsers = [
-  {
-    id: 1,
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    beginnerCount: 10,
-    intermediateCount: 5,
-    advancedCount: 2,
-    totalAttempted: 17,
-    lastLogin: '2023-05-09',
-    status: 'active',
-  },
-  {
-    id: 2,
-    name: 'Sarah Parker',
-    email: 'sarah.parker@gmail.com',
-    beginnerCount: 8,
-    intermediateCount: 12,
-    advancedCount: 6,
-    totalAttempted: 26,
-    lastLogin: '2023-05-08',
-    status: 'active',
-  },
-  {
-    id: 3,
-    name: 'Mike Wilson',
-    email: 'mike.wilson@outlook.com',
-    beginnerCount: 3,
-    intermediateCount: 0,
-    advancedCount: 0,
-    totalAttempted: 3,
-    lastLogin: '2023-05-07',
-    status: 'inactive',
-  },
-  {
-    id: 4,
-    name: 'Anna Johnson',
-    email: 'anna.johnson@company.co',
-    beginnerCount: 15,
-    intermediateCount: 9,
-    advancedCount: 3,
-    totalAttempted: 27,
-    lastLogin: '2023-05-09',
-    status: 'active',
-  },
-  {
-    id: 5,
-    name: 'Carlos Mendez',
-    email: 'carlos.mendez@tech.edu',
-    beginnerCount: 5,
-    intermediateCount: 3,
-    advancedCount: 0,
-    totalAttempted: 8,
-    lastLogin: '2023-05-06',
-    status: 'active',
-  },
-];
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/redux/store';
+import { fetchUsers, toggleUserStatus, setFilters } from '@/redux/Slices/userSlice';
+import { User as UserType } from '@/redux/Slices/userSlice';
 
 // Status filter options
 const statusOptions = [
@@ -87,86 +31,56 @@ const statusOptions = [
   { value: 'inactive', label: 'Inactive' },
 ];
 
-interface UserData {
-  id: number;
-  name: string;
-  email: string;
-  beginnerCount: number;
-  intermediateCount: number;
-  advancedCount: number;
-  totalAttempted: number;
-  lastLogin: string;
-  status: string;
-}
-
 const Users = () => {
   const { toast } = useToast();
-  const [users, setUsers] = useState<UserData[]>(initialUsers);
-  const [filteredUsers, setFilteredUsers] = useState<UserData[]>(initialUsers);
-  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
-  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const dispatch = useDispatch<AppDispatch>();
+  const { users, loading, error, filters } = useSelector((state: RootState) => state.user);
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = React.useState(false);
+  const [currentUser, setCurrentUser] = React.useState<UserType | null>(null);
   
-  // Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  // Fetch users on component mount and when filters change
+  useEffect(() => {
+    dispatch(fetchUsers(filters));
+  }, [dispatch, filters]);
   
   // Search and filter users
   const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    filterUsers(term, statusFilter);
+    dispatch(setFilters({ search: term }));
   };
   
   const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    filterUsers(searchTerm, status);
-  };
-  
-  const filterUsers = (term: string, status: string) => {
-    let filtered = [...users];
-    
-    if (term) {
-      filtered = filtered.filter(user => 
-        user.name.toLowerCase().includes(term.toLowerCase()) ||
-        user.email.toLowerCase().includes(term.toLowerCase())
-      );
-    }
-    
-    if (status) {
-      filtered = filtered.filter(user => user.status === status);
-    }
-    
-    setFilteredUsers(filtered);
+    dispatch(setFilters({ status }));
   };
   
   // Open user profile dialog
-  const openProfileDialog = (user: UserData) => {
+  const openProfileDialog = (user: UserType) => {
     setCurrentUser(user);
     setIsProfileDialogOpen(true);
   };
   
   // Open reset password dialog
-  const openResetPasswordDialog = (user: UserData) => {
+  const openResetPasswordDialog = (user: UserType) => {
     setCurrentUser(user);
     setIsResetPasswordDialogOpen(true);
   };
   
   // Toggle user status (activate/deactivate)
-  const toggleUserStatus = (user: UserData) => {
+  const handleToggleUserStatus = async (user: UserType) => {
     const newStatus = user.status === 'active' ? 'inactive' : 'active';
-    const updatedUsers = users.map(u => 
-      u.id === user.id ? { ...u, status: newStatus } : u
-    );
-    
-    setUsers(updatedUsers);
-    setFilteredUsers(
-      filterUsers(searchTerm, statusFilter)
-    );
-    
-    toast({
-      title: "Success",
-      description: `User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
-    });
+    try {
+      await dispatch(toggleUserStatus({ userId: user.id, newStatus })).unwrap();
+      toast({
+        title: "Success",
+        description: `User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error as string,
+        variant: "destructive",
+      });
+    }
   };
   
   // Handle password reset
@@ -194,7 +108,7 @@ const Users = () => {
           {
             name: "Status",
             options: statusOptions,
-            value: statusFilter,
+            value: filters.status,
             onChange: handleStatusFilter,
           },
         ]}
@@ -207,7 +121,6 @@ const Users = () => {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Progress Summary</th>
                 <th>Total Attempted</th>
                 <th>Last Login</th>
                 <th>Status</th>
@@ -215,70 +128,67 @@ const Users = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="font-medium">{user.name}</td>
-                  <td className="whitespace-nowrap">{user.email}</td>
-                  <td>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex flex-col items-center">
-                        <span className="text-xs text-gray-500">B</span>
-                        <span className="text-sm font-medium">{user.beginnerCount}</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-xs text-gray-500">I</span>
-                        <span className="text-sm font-medium">{user.intermediateCount}</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-xs text-gray-500">A</span>
-                        <span className="text-sm font-medium">{user.advancedCount}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="text-center">{user.totalAttempted}</td>
-                  <td className="whitespace-nowrap">{user.lastLogin}</td>
-                  <td>
-                    <StatusBadge
-                      status={user.status}
-                      className={user.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                      }
-                    />
-                  </td>
-                  <td>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex gap-1">
-                          <Eye size={16} /> Actions
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openProfileDialog(user)}>
-                          <User size={16} className="mr-2" /> View Profile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openResetPasswordDialog(user)}>
-                          <RotateCcw size={16} className="mr-2" /> Reset Password
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleUserStatus(user)}>
-                          {user.status === 'active' ? (
-                            <>
-                              <Ban size={16} className="mr-2 text-red-500" /> Deactivate User
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle size={16} className="mr-2 text-green-500" /> Activate User
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-4">
+                    Loading...
                   </td>
                 </tr>
-              ))}
-              {filteredUsers.length === 0 && (
+              ) : error ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 text-gray-500">
+                  <td colSpan={6} className="text-center py-4 text-red-500">
+                    {error}
+                  </td>
+                </tr>
+              ) : users.length > 0 ? (
+                users.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="font-medium">{user.name}</td>
+                    <td className="whitespace-nowrap">{user.email}</td>
+                    <td className="text-center">{user.totalAttempted}</td>
+                    <td className="whitespace-nowrap">{user.lastLogin || 'Never'}</td>
+                    <td>
+                      <StatusBadge
+                        status={user.status}
+                        className={user.status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                        }
+                      />
+                    </td>
+                    <td>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="flex gap-1">
+                            <Eye size={16} /> Actions
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openProfileDialog(user)}>
+                            <User size={16} className="mr-2" /> View Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openResetPasswordDialog(user)}>
+                            <RotateCcw size={16} className="mr-2" /> Reset Password
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleUserStatus(user)}>
+                            {user.status === 'active' ? (
+                              <>
+                                <Ban size={16} className="mr-2 text-red-500" /> Deactivate User
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle size={16} className="mr-2 text-green-500" /> Activate User
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="text-center py-4 text-gray-500">
                     No users found
                   </td>
                 </tr>
@@ -315,24 +225,6 @@ const Users = () => {
               </div>
               
               <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Progress Summary</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="data-card p-4 flex flex-col items-center">
-                      <span className="text-xs text-gray-500">Beginner</span>
-                      <span className="text-2xl font-bold mt-1 text-primary">{currentUser.beginnerCount}</span>
-                    </div>
-                    <div className="data-card p-4 flex flex-col items-center">
-                      <span className="text-xs text-gray-500">Intermediate</span>
-                      <span className="text-2xl font-bold mt-1 text-primary">{currentUser.intermediateCount}</span>
-                    </div>
-                    <div className="data-card p-4 flex flex-col items-center">
-                      <span className="text-xs text-gray-500">Advanced</span>
-                      <span className="text-2xl font-bold mt-1 text-primary">{currentUser.advancedCount}</span>
-                    </div>
-                  </div>
-                </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Total Questions Attempted</h4>
@@ -340,7 +232,7 @@ const Users = () => {
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Last Login</h4>
-                    <p className="text-lg font-medium mt-1">{currentUser.lastLogin}</p>
+                    <p className="text-lg font-medium mt-1">{currentUser.lastLogin || 'Never'}</p>
                   </div>
                 </div>
               </div>
