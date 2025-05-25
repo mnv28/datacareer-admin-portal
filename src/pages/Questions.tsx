@@ -33,10 +33,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { RootState, AppDispatch } from '@/redux/store';
-import { 
-  fetchQuestions, 
-  createQuestion, 
-  updateQuestion, 
+import {
+  fetchQuestions,
+  createQuestion,
+  updateQuestion,
   deleteQuestion,
   setFilters,
   Question
@@ -69,7 +69,7 @@ const Questions = () => {
   const { questions, loading, error, filters } = useSelector((state: RootState) => state.question);
   const { companies } = useSelector((state: RootState) => state.company);
   const { topics } = useSelector((state: RootState) => state.topic);
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
@@ -87,39 +87,40 @@ const Questions = () => {
     solution: '',
     createTableQuery: '',
     addDataQuery: '',
+    solutionQuery: '',
   });
-  
+
   // Additional state for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Fetch questions, companies and topics on component mount
   useEffect(() => {
     dispatch(fetchQuestions(filters));
     dispatch(fetchCompanies({}));
     dispatch(fetchTopics({}));
   }, [dispatch, filters]);
-  
+
   // Search and filter questions
   const handleSearch = (term: string) => {
     dispatch(setFilters({ search: term }));
   };
-  
+
   const handleCompanyFilter = (companyId: string) => {
     dispatch(setFilters({ companyId }));
   };
-  
+
   const handleTypeFilter = (dbType: string) => {
     dispatch(setFilters({ dbType }));
   };
-  
+
   const handleDifficultyFilter = (difficulty: string) => {
     dispatch(setFilters({ difficulty }));
   };
-  
+
   const handleStatusFilter = (status: string) => {
     dispatch(setFilters({ status }));
   };
-  
+
   // Handle form data change
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -127,7 +128,7 @@ const Questions = () => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
-  
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -140,7 +141,7 @@ const Questions = () => {
         });
         return;
       }
-      
+
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
@@ -155,7 +156,7 @@ const Questions = () => {
       setFormData(prev => ({ ...prev, schemaImage: file }));
     }
   };
-  
+
   // Helper function to check if value is a File object
   const isFile = (value: unknown): value is File => {
     return value instanceof File;
@@ -167,28 +168,31 @@ const Questions = () => {
     if (isFile(image)) return URL.createObjectURL(image);
     return image as string;
   };
-  
+
   // Open dialog for creating or editing a question
   const openDialog = async (question: Question | null = null) => {
     if (question) {
       setCurrentQuestion(question);
-      
+
       // Parse the query JSON if it exists
       let createTableQuery = '';
       let addDataQuery = '';
+      let solutionQuery = '';
       try {
         const queryData = JSON.parse(question.query);
         createTableQuery = queryData.createTable || '';
         addDataQuery = queryData.addData || '';
+        solutionQuery = queryData.solutionQuery || '';
       } catch (e) {
         // If parsing fails, use the query as is
         createTableQuery = question.query;
       }
-      
+
       setFormData({
         ...question,
         createTableQuery,
         addDataQuery,
+        solutionQuery,
       });
     } else {
       setCurrentQuestion(null);
@@ -205,31 +209,32 @@ const Questions = () => {
         solution: '',
         createTableQuery: '',
         addDataQuery: '',
+        solutionQuery: '',
       });
     }
     setIsDialogOpen(true);
   };
-  
+
   // Open preview dialog
   const openPreviewDialog = (question: Question) => {
     setCurrentQuestion(question);
     setIsPreviewDialogOpen(true);
   };
-  
+
   // Open delete confirmation dialog
   const openDeleteDialog = (question: Question) => {
     setCurrentQuestion(question);
     setIsDeleteDialogOpen(true);
   };
-  
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     // Check if content is empty or only contains whitespace/HTML tags
     const isContentEmpty = !formData.questionContent || formData.questionContent.replace(/<[^>]*>/g, '').trim() === '';
-    
+
     if (!formData.title || !formData.companyId || !formData.topicId || isContentEmpty) {
       toast({
         title: "Error",
@@ -239,7 +244,7 @@ const Questions = () => {
       setIsSubmitting(false);
       return;
     }
-    
+
     try {
       const formDataToSubmit = new FormData();
       formDataToSubmit.append('title', formData.title);
@@ -253,13 +258,18 @@ const Questions = () => {
         formDataToSubmit.append('schemaImage', formData.schemaImage);
       }
       formDataToSubmit.append('solution', formData.solution);
-      
+
       // Combine the queries into JSON format
       const queryJson = {
         createTable: formData.createTableQuery || '',
         addData: formData.addDataQuery || ''
       };
       formDataToSubmit.append('query', JSON.stringify(queryJson));
+      
+      // Add solutionQuery as a separate form field
+      if (formData.solutionQuery) {
+        formDataToSubmit.append('solutionQuery', formData.solutionQuery);
+      }
 
       if (currentQuestion) {
         // Update existing question
@@ -287,11 +297,11 @@ const Questions = () => {
       setIsSubmitting(false);
     }
   };
-  
+
   // Handle question deletion
   const handleDelete = async () => {
     if (!currentQuestion) return;
-    
+
     try {
       await dispatch(deleteQuestion(currentQuestion.id));
       setIsDeleteDialogOpen(false);
@@ -307,13 +317,13 @@ const Questions = () => {
       });
     }
   };
-  
+
   // Update the dialog close handler
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setIsSubmitting(false);
   };
-  
+
   return (
     <AdminLayout>
       <PageHeader
@@ -325,7 +335,7 @@ const Questions = () => {
           </Button>
         }
       />
-      
+
       <SearchFilter
         searchPlaceholder="Search questions..."
         onSearch={handleSearch}
@@ -356,7 +366,7 @@ const Questions = () => {
           },
         ]}
       />
-      
+
       <div className="data-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -393,7 +403,7 @@ const Questions = () => {
               ) : (
                 questions.map((question) => (
                   <tr key={question.id} className="hover:bg-gray-50">
-                 
+
                     <td className="font-medium">{question.title}</td>
                     <td>{question.company}</td>
                     <td>{question.dbType}</td>
@@ -406,22 +416,22 @@ const Questions = () => {
                     </td>
                     <td>
                       <div className="flex items-center space-x-2">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="icon"
                           onClick={() => openPreviewDialog(question)}
                         >
                           <Eye size={16} />
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="icon"
                           onClick={() => openDialog(question)}
                         >
                           <Pencil size={16} />
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="icon"
                           onClick={() => openDeleteDialog(question)}
                           className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
@@ -437,7 +447,7 @@ const Questions = () => {
           </table>
         </div>
       </div>
-      
+
       {/* Create/Edit Question Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -446,13 +456,13 @@ const Questions = () => {
               {currentQuestion ? 'Edit Question' : 'Add New Question'}
             </DialogTitle>
             <DialogDescription>
-              {currentQuestion 
+              {currentQuestion
                 ? 'Update the question details below.'
                 : 'Enter the question details to add it to the platform.'
               }
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             <div className="grid grid-cols-1 gap-4">
               <div>
@@ -466,7 +476,7 @@ const Questions = () => {
                   className="mt-1"
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="companyId">Company*</Label>
@@ -485,7 +495,7 @@ const Questions = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="topicId">Topic*</Label>
                   <select
@@ -504,7 +514,7 @@ const Questions = () => {
                   </select>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="dbType">DB Type</Label>
@@ -522,7 +532,7 @@ const Questions = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="difficulty">Difficulty</Label>
                   <select
@@ -539,7 +549,7 @@ const Questions = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="status">Status</Label>
                   <select
@@ -558,15 +568,16 @@ const Questions = () => {
                 </div>
               </div>
             </div>
-            
+
             <Tabs defaultValue="content">
               <TabsList className="grid grid-cols-4">
                 <TabsTrigger value="content">Question Content</TabsTrigger>
                 <TabsTrigger value="schema">Schema/ERD</TabsTrigger>
                 <TabsTrigger value="queries">Queries</TabsTrigger>
                 <TabsTrigger value="solution">Solution</TabsTrigger>
+                {/* <TabsTrigger value='solutionQuery'>Solution Query</TabsTrigger> */}
               </TabsList>
-              
+
               <TabsContent value="content" className="mt-4">
                 <Label htmlFor="questionContent">Question Content*</Label>
                 <RichTextEditor
@@ -577,7 +588,7 @@ const Questions = () => {
                   Use the toolbar above to format your content. You can add tables, lists, and apply various text styles.
                 </p>
               </TabsContent>
-              
+
               <TabsContent value="schema" className="mt-4">
                 <div className="space-y-4">
                   <div>
@@ -590,7 +601,7 @@ const Questions = () => {
                       Use the toolbar above to format your schema content. You can add tables, lists, and apply various text styles.
                     </p>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="schemaImage">Schema/ERD Image</Label>
                     <div className="mt-1 flex items-center gap-4">
@@ -647,7 +658,7 @@ const Questions = () => {
                           automaticLayout: true,
                         }}
                       />
-                      
+
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       Write the CREATE TABLE query here. Example: CREATE TABLE table_name (column1 datatype, column2 datatype);
@@ -661,7 +672,7 @@ const Questions = () => {
                         height="200px"
                         language="sql"
                         theme="vs-light"
-                    
+
                         value={formData.addDataQuery || ''}
                         onChange={(value) => setFormData(prev => ({ ...prev, addDataQuery: value || '' }))}
                         options={{
@@ -680,29 +691,49 @@ const Questions = () => {
                   </div>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="solution" className="mt-4">
-                <Label htmlFor="solution">Sample Solution</Label>
-                <RichTextEditor
-                  content={formData.solution || ''}
-                  onChange={(content) => setFormData(prev => ({ ...prev, solution: content }))}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Use the toolbar above to format your solution. You can add tables, lists, and apply various text styles. For SQL code, you can use the code formatting options.
-                </p>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="solution">Sample Solution</Label>
+                    <div className="mt-1 overflow-hidden">
+                      <RichTextEditor
+                        content={formData.solution || ''}
+                        onChange={(content) => setFormData(prev => ({ ...prev, solution: content }))}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Use the toolbar above to format your solution. You can add tables, lists, and apply various text styles. For SQL code, you can use the code formatting options.
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="solutionQuery">Solution Query</Label>
+                    <div className="mt-1 overflow-hidden">
+                      <MonacoEditor
+                        height="200px"
+                        language="sql"
+                        theme="vs-light"
+                        value={formData.solutionQuery || ''}
+                        onChange={(value) => setFormData(prev => ({ ...prev, solutionQuery: value || '' }))}
+                      />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
+
+
             </Tabs>
-            
+
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={handleDialogClose}
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="bg-primary-light hover:bg-primary"
                 disabled={isSubmitting}
               >
@@ -712,7 +743,7 @@ const Questions = () => {
           </form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Preview Question Dialog */}
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -730,7 +761,7 @@ const Questions = () => {
               </span>
             </div>
           </DialogHeader>
-          
+
           <Tabs defaultValue="content">
             <TabsList className="grid grid-cols-4">
               <TabsTrigger value="content">Question</TabsTrigger>
@@ -738,19 +769,19 @@ const Questions = () => {
               <TabsTrigger value="queries">Queries</TabsTrigger>
               <TabsTrigger value="solution">Solution</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="content" className="mt-4">
               <div className="p-4 border rounded-md bg-white">
-                <div 
+                <div
                   className="prose max-w-none"
                   dangerouslySetInnerHTML={{ __html: currentQuestion?.questionContent || '' }}
                 />
               </div>
             </TabsContent>
-            
+
             <TabsContent value="schema" className="mt-4">
               <div className="p-4 border rounded-md bg-white">
-                <div 
+                <div
                   className="prose max-w-none"
                   dangerouslySetInnerHTML={{ __html: currentQuestion?.schemaContent || 'No schema information provided.' }}
                 />
@@ -773,19 +804,19 @@ const Questions = () => {
                 </pre>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="solution" className="mt-4">
               <div className="p-4 border rounded-md bg-gray-50">
-                <div 
+                <div
                   className="prose max-w-none font-mono text-sm"
                   dangerouslySetInnerHTML={{ __html: currentQuestion?.solution || 'No solution provided.' }}
                 />
               </div>
             </TabsContent>
           </Tabs>
-          
+
           <DialogFooter>
-            <Button 
+            <Button
               onClick={() => setIsPreviewDialogOpen(false)}
             >
               Close
@@ -793,7 +824,7 @@ const Questions = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[450px]">
@@ -804,14 +835,14 @@ const Questions = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDelete}
             >
               Delete

@@ -16,6 +16,7 @@ interface QuestionResponse {
   schemaImage: string | null;
   solution: string;
   query: string;
+  solutionQuery?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,6 +38,7 @@ export interface Question {
   query: string;
   createTableQuery?: string;
   addDataQuery?: string;
+  solutionQuery?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,10 +70,21 @@ const initialState: QuestionState = {
 };
 
 const transformQuestion = (question: QuestionResponse): Question => {
+  // Parse the query JSON to extract solutionQuery if it exists
+  let solutionQuery = '';
+  try {
+    const queryData = JSON.parse(question.query);
+    solutionQuery = queryData.solutionQuery || '';
+  } catch (e) {
+    // If parsing fails, use empty string
+    solutionQuery = '';
+  }
+
   return {
     ...question,
     topic: question.topic || '',
     topicId: question.topicId || (question.topic ? parseInt(question.topic) : 0),
+    solutionQuery: question.solutionQuery || solutionQuery
   };
 };
 
