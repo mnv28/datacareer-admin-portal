@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { apiInstance } from "../../api/axiosApi";
-import { AxiosError } from 'axios';
+import { apiInstance } from "@/api/axiosApi";
 
 export interface Table {
   id: number;
@@ -57,91 +56,119 @@ const initialState: TableState = {
   }
 };
 
-export const fetchTables = createAsyncThunk(
-  'table/fetchAll',
-  async (filters: { search?: string }, { rejectWithValue }) => {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+// export const fetchTables = createAsyncThunk(
+//   'table/fetchAll',
+//   async (filters: { search?: string }, { rejectWithValue }) => {
+//     try {
+//       // Simulate API delay
+//       await new Promise(resolve => setTimeout(resolve, 500));
       
-      let filteredTables = [...staticTables];
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredTables = filteredTables.filter(table => 
-          table.name.toLowerCase().includes(searchLower) ||
-          table.query.toLowerCase().includes(searchLower)
-        );
-      }
-      return filteredTables;
-    } catch (error) {
-      return rejectWithValue('Failed to fetch tables');
-    }
-  }
-);
+//       let filteredTables = [...staticTables];
+//       if (filters.search) {
+//         const searchLower = filters.search.toLowerCase();
+//         filteredTables = filteredTables.filter(table => 
+//           table.name.toLowerCase().includes(searchLower) ||
+//           table.query.toLowerCase().includes(searchLower)
+//         );
+//       }
+//       return filteredTables;
+//     } catch (error) {
+//       return rejectWithValue('Failed to fetch tables');
+//     }
+//   }
+// );
 
 export const createTable = createAsyncThunk(
-  'table/create',
-  async (data: Partial<Table>, { rejectWithValue }) => {
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const newTable: Table = {
-        id: staticTables.length + 1,
-        name: data.name || '',
-        query: data.query || '',
-        insertData: data.insertData || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      return newTable;
-    } catch (error) {
-      return rejectWithValue('Failed to create table');
-    }
+  'tables/createTable',
+  async (formData: { name: string; query: string; insertData: string }, { getState }) => {
+    // Get token from auth state (adjust as needed)
+    const state: any = getState();
+    const token = state.auth?.token; // or wherever you store your JWT
+
+      const response = await apiInstance.post(
+        '/api/dynamicTable',
+        {
+          tableName: formData.name,
+          createTableQuery: formData.query,
+          insertDataQuery: formData.insertData || ''
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    return response.data;
   }
 );
 
 export const updateTable = createAsyncThunk(
   'table/update',
-  async ({ id, data }: { id: number; data: Partial<Table> }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number; data: Partial<Table> }, { getState, rejectWithValue }) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const existingTable = staticTables.find(t => t.id === id);
-      if (!existingTable) {
-        throw new Error('Table not found');
-      }
-      
-      const updatedTable: Table = {
-        ...existingTable,
-        ...data,
-        updatedAt: new Date().toISOString()
-      };
-      
-      return updatedTable;
-    } catch (error) {
-      return rejectWithValue('Failed to update table');
+      // Get token from auth state (adjust as needed)
+      const state: any = getState();
+      const token = state.auth?.token; // or wherever you store your JWT
+
+      const response = await apiInstance.put(
+        `/api/dynamicTable/${id}`,
+        {
+          tableName: data.name,
+          createTableQuery: data.query,
+          insertDataQuery: data.insertData || ''
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update table');
     }
   }
 );
 
 export const deleteTable = createAsyncThunk(
   'table/delete',
-  async (id: number, { rejectWithValue }) => {
+  async (id: number, { getState, rejectWithValue }) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const tableExists = staticTables.some(t => t.id === id);
-      if (!tableExists) {
-        throw new Error('Table not found');
-      }
-      
-      return id;
-    } catch (error) {
-      return rejectWithValue('Failed to delete table');
+      // Get token from auth state (adjust as needed)
+      const state: any = getState();
+      const token = state.auth?.token; // or wherever you store your JWT
+
+      await apiInstance.delete(`/api/dynamicTable/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      return id; // Return the deleted table's id so you can remove it from state
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to delete table');
+    }
+  }
+);
+
+export const fetchDynamicTables = createAsyncThunk(
+  'table/fetchDynamicTables',
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const state: any = getState();
+      const token = state.auth?.token;
+
+      const response = await apiInstance.get('/api/dynamicTable', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch dynamic tables');
     }
   }
 );
@@ -159,19 +186,7 @@ const tableSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch Tables
-      .addCase(fetchTables.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchTables.fulfilled, (state, action) => {
-        state.loading = false;
-        state.tables = action.payload;
-      })
-      .addCase(fetchTables.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
+
       // Create Table
       .addCase(createTable.pending, (state) => {
         state.loading = true;
@@ -211,6 +226,29 @@ const tableSlice = createSlice({
         state.tables = state.tables.filter(table => table.id !== action.payload);
       })
       .addCase(deleteTable.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Fetch Dynamic Tables
+      .addCase(fetchDynamicTables.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchDynamicTables.fulfilled, (state, action) => {
+        state.loading = false;
+        state.tables = Array.isArray(action.payload)
+          ? action.payload.map((t: any) => ({
+              id: t.id,
+              name: t.tableName,
+              query: t.createTableQuery,
+              insertData: t.insertDataQuery,
+              createdAt: t.createdAt,
+              updatedAt: t.updatedAt,
+              status: t.status,
+            }))
+          : [];
+      })
+      .addCase(fetchDynamicTables.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

@@ -37,7 +37,7 @@ const statusOptions = [
 const Domains = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
-  const { domains, loading, error, filters = { search: '', status: '' } } = useSelector((state: RootState) => state.domain);
+  const { domains, loading, error, filters } = useSelector((state: RootState) => state.domains);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentDomain, setCurrentDomain] = useState<Domain | null>(null);

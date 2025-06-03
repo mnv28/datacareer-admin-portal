@@ -35,7 +35,7 @@ const Submissions = () => {
   const [currentSubmission, setCurrentSubmission] = useState<Submission | null>(null);
   
   // Redux state
-  const { submissions, loading, error, filters } = useSelector((state: RootState) => state.submission);
+  const { submissions, loading, error, filters } = useSelector((state: RootState) => state.submissions);
   
   // Fetch submissions
   useEffect(() => {

@@ -44,6 +44,8 @@ import {
 import { fetchCompanies } from '@/redux/Slices/companySlice';
 import { fetchTopics } from '@/redux/Slices/topicSlice';
 import MonacoEditor from '@monaco-editor/react';
+import { log } from 'console';
+import { fetchDatabases } from '@/redux/Slices/databaseSlice';
 
 // Filter options
 const typeOptions = [
@@ -69,11 +71,18 @@ const Questions = () => {
   const { questions, loading, error, filters } = useSelector((state: RootState) => state.question);
   const { companies } = useSelector((state: RootState) => state.company);
   const { topics } = useSelector((state: RootState) => state.topic);
+  const { databases, loading: databasesLoading } = useSelector((state: RootState) => state.database);
+
+  // console.log("tables = ",tables)
+  console.log("databases = ", databases);
+
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  console.log("currentQuestion?.query =", currentQuestion);
+
   const [formData, setFormData] = useState<Partial<Question>>({
     title: '',
     companyId: 0,
@@ -82,13 +91,15 @@ const Questions = () => {
     difficulty: 'Beginner',
     status: 'active',
     questionContent: '',
-    schemaContent: '',
-    schemaImage: null,
+    // schemaContent: '',
+    // schemaImage: null,
     solution: '',
-    createTableQuery: '',
-    addDataQuery: '',
+    // createTableQuery: '',
+    // addDataQuery: '',
     solutionQuery: '',
+    dynamicTableInfoId: '',
   });
+console.log("formData = ",formData);
 
   // Additional state for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,6 +109,7 @@ const Questions = () => {
     dispatch(fetchQuestions(filters));
     dispatch(fetchCompanies({}));
     dispatch(fetchTopics({}));
+    dispatch(fetchDatabases(filters));
   }, [dispatch, filters]);
 
   // Search and filter questions
@@ -171,28 +183,23 @@ const Questions = () => {
 
   // Open dialog for creating or editing a question
   const openDialog = async (question: Question | null = null) => {
+
     if (question) {
       setCurrentQuestion(question);
-
-      // Parse the query JSON if it exists
-      let createTableQuery = '';
-      let addDataQuery = '';
-      let solutionQuery = '';
-      try {
-        const queryData = JSON.parse(question.query);
-        createTableQuery = queryData.createTable || '';
-        addDataQuery = queryData.addData || '';
-        solutionQuery = queryData.solutionQuery || '';
-      } catch (e) {
-        // If parsing fails, use the query as is
-        createTableQuery = question.query;
-      }
+      // try {
+      //   const queryData = JSON.parse(question.query);
+      //   console.log("queryData ===",queryData);
+      
+      //   solutionQuery = queryData.solutionQuery || '';
+      // } catch (e) {
+      //   // If parsing fails, use the query as is
+      //   createTableQuery = question.query;
+      // }
 
       setFormData({
         ...question,
-        createTableQuery,
-        addDataQuery,
-        solutionQuery,
+        solutionQuery: question.solutionQuery,
+        dynamicTableInfoId: question.dynamicTableInfoId || '',
       });
     } else {
       setCurrentQuestion(null);
@@ -204,14 +211,16 @@ const Questions = () => {
         difficulty: 'Beginner',
         status: 'active',
         questionContent: '',
-        schemaContent: '',
-        schemaImage: null,
+        // schemaContent: '',
+        // schemaImage: null,
         solution: '',
-        createTableQuery: '',
-        addDataQuery: '',
+        // createTableQuery: '',
+        // addDataQuery: '',
         solutionQuery: '',
+        dynamicTableInfoId: '',
       });
     }
+    // dispatch(fetchQuestions(filters));
     setIsDialogOpen(true);
   };
 
@@ -235,7 +244,7 @@ const Questions = () => {
     // Check if content is empty or only contains whitespace/HTML tags
     const isContentEmpty = !formData.questionContent || formData.questionContent.replace(/<[^>]*>/g, '').trim() === '';
 
-    if (!formData.title || !formData.companyId || !formData.topicId || isContentEmpty) {
+    if (!formData.title || !formData.companyId || !formData.topicId || isContentEmpty || !formData.dynamicTableInfoId) {
       toast({
         title: "Error",
         description: "Please fill all required fields",
@@ -253,19 +262,20 @@ const Questions = () => {
       formDataToSubmit.append('dbType', formData.dbType);
       formDataToSubmit.append('difficulty', formData.difficulty.toLowerCase());
       formDataToSubmit.append('questionContent', formData.questionContent);
-      formDataToSubmit.append('schemaContent', formData.schemaContent);
-      if (formData.schemaImage && isFile(formData.schemaImage)) {
-        formDataToSubmit.append('schemaImage', formData.schemaImage);
-      }
+      formDataToSubmit.append('dynamicTableInfoId', formData.dynamicTableInfoId);
+      // formDataToSubmit.append('schemaContent', formData.schemaContent);
+      // if (formData.schemaImage && isFile(formData.schemaImage)) {
+      //   formDataToSubmit.append('schemaImage', formData.schemaImage);
+      // }
       formDataToSubmit.append('solution', formData.solution);
 
       // Combine the queries into JSON format
-      const queryJson = {
-        createTable: formData.createTableQuery || '',
-        addData: formData.addDataQuery || ''
-      };
-      formDataToSubmit.append('query', JSON.stringify(queryJson));
-      
+      // const queryJson = {
+      //   createTable: formData.createTableQuery || '',
+      //   addData: formData.addDataQuery || ''
+      // };
+      // formDataToSubmit.append('query', JSON.stringify(queryJson));
+
       // Add solutionQuery as a separate form field
       if (formData.solutionQuery) {
         formDataToSubmit.append('solutionQuery', formData.solutionQuery);
@@ -279,6 +289,7 @@ const Questions = () => {
           description: "Question updated successfully",
         });
       } else {
+        console.log("formDataToSubmit = ", formDataToSubmit);
         // Create new question
         await dispatch(createQuestion(formDataToSubmit));
         toast({
@@ -286,6 +297,7 @@ const Questions = () => {
           description: "Question created successfully",
         });
       }
+
       setIsDialogOpen(false);
     } catch (error) {
       toast({
@@ -377,6 +389,7 @@ const Questions = () => {
                 <th>Type</th>
                 <th>Difficulty</th>
                 <th>Topic</th>
+                <th>Dynamic Table</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -403,14 +416,16 @@ const Questions = () => {
               ) : (
                 questions.map((question) => (
                   <tr key={question.id} className="hover:bg-gray-50">
-
                     <td className="font-medium">{question.title}</td>
-                    <td>{question.company}</td>
+                    <td>{question.company?.name || 'N/A'}</td>
                     <td>{question.dbType}</td>
                     <td>
                       <StatusBadge status={question.difficulty.toLowerCase()} />
                     </td>
-                    <td>{question.topic}</td>
+                    <td>{question.topic?.name || 'N/A'}</td>
+                    <td>
+                      {question.dynamicTableInfo?.databaseName || 'N/A'}
+                    </td>
                     <td>
                       <StatusBadge status={question.status} />
                     </td>
@@ -567,13 +582,32 @@ const Questions = () => {
                   </select>
                 </div>
               </div>
+
+              <div>
+                <Label htmlFor="dynamicTableInfoId">Dynamic Table Information*</Label>
+                <select
+                  id="dynamicTableInfoId"
+                  name="dynamicTableInfoId"
+                  value={formData.dynamicTableInfoId || ''}
+                  onChange={handleChange}
+                  className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="" disabled>Select table</option>
+                  {databases.map(database => (
+                    <option key={database.id} value={database.id}>
+                      {database.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <Tabs defaultValue="content">
               <TabsList className="grid grid-cols-4">
                 <TabsTrigger value="content">Question Content</TabsTrigger>
-                <TabsTrigger value="schema">Schema/ERD</TabsTrigger>
-                <TabsTrigger value="queries">Queries</TabsTrigger>
+                {/* <TabsTrigger value="schema">Schema/ERD</TabsTrigger>
+                <TabsTrigger value="queries">Queries</TabsTrigger> */}
                 <TabsTrigger value="solution">Solution</TabsTrigger>
                 {/* <TabsTrigger value='solutionQuery'>Solution Query</TabsTrigger> */}
               </TabsList>
@@ -589,108 +623,8 @@ const Questions = () => {
                 </p>
               </TabsContent>
 
-              <TabsContent value="schema" className="mt-4">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="schemaContent">Database Schema/ERD</Label>
-                    <RichTextEditor
-                      content={formData.schemaContent || ''}
-                      onChange={(content) => setFormData(prev => ({ ...prev, schemaContent: content }))}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Use the toolbar above to format your schema content. You can add tables, lists, and apply various text styles.
-                    </p>
-                  </div>
 
-                  <div>
-                    <Label htmlFor="schemaImage">Schema/ERD Image</Label>
-                    <div className="mt-1 flex items-center gap-4">
-                      <Input
-                        id="schemaImage"
-                        type="file"
-                        accept=".jpg,.jpeg,.png"
-                        onChange={handleImageChange}
-                        className="w-full"
-                      />
-                      {formData.schemaImage && (
-                        <div className="relative w-20 h-20">
-                          <img
-                            src={getImageUrl(formData.schemaImage)}
-                            alt="Schema preview"
-                            className="w-full h-full object-contain border rounded-md"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white shadow-sm"
-                            onClick={() => setFormData(prev => ({ ...prev, schemaImage: null }))}
-                          >
-                            <X size={14} />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Supported formats: JPG, JPEG, PNG (max 5MB)
-                    </p>
-                  </div>
-                </div>
-              </TabsContent>
 
-              <TabsContent value="queries" className="mt-4">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="createTable">Create Table Query</Label>
-                    <div className="mt-1 overflow-hidden">
-                      <MonacoEditor
-                        height="200px"
-                        language="sql"
-                        theme="vs-light"
-                        value={formData.createTableQuery || ''}
-                        onChange={(value) => setFormData(prev => ({ ...prev, createTableQuery: value || '' }))}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          lineNumbers: 'on',
-                          roundedSelection: false,
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                        }}
-                      />
-
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Write the CREATE TABLE query here. Example: CREATE TABLE table_name (column1 datatype, column2 datatype);
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="addData">Insert Data Query</Label>
-                    <div className="mt-1 border rounded-md overflow-hidden">
-                      <MonacoEditor
-                        height="200px"
-                        language="sql"
-                        theme="vs-light"
-
-                        value={formData.addDataQuery || ''}
-                        onChange={(value) => setFormData(prev => ({ ...prev, addDataQuery: value || '' }))}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          lineNumbers: 'on',
-                          roundedSelection: false,
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Write the INSERT queries here. Example: INSERT INTO table_name (column1, column2) VALUES (value1, value2);
-                    </p>
-                  </div>
-                </div>
-              </TabsContent>
 
               <TabsContent value="solution" className="mt-4">
                 <div className="space-y-4">
@@ -745,7 +679,7 @@ const Questions = () => {
       </Dialog>
 
       {/* Preview Question Dialog */}
-      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+      {/* <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -765,8 +699,7 @@ const Questions = () => {
           <Tabs defaultValue="content">
             <TabsList className="grid grid-cols-4">
               <TabsTrigger value="content">Question</TabsTrigger>
-              <TabsTrigger value="schema">Schema</TabsTrigger>
-              <TabsTrigger value="queries">Queries</TabsTrigger>
+           
               <TabsTrigger value="solution">Solution</TabsTrigger>
             </TabsList>
 
@@ -783,13 +716,13 @@ const Questions = () => {
               <div className="p-4 border rounded-md bg-white">
                 <div
                   className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: currentQuestion?.schemaContent || 'No schema information provided.' }}
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.dynamicTableInfo?.schemaContent || 'No schema information provided.' }}
                 />
-                {currentQuestion?.schemaImage && (
+                {currentQuestion?.dynamicTableInfo?.schemaImageUrl && (
                   <div className="mt-4">
                     <img
-                      src={getImageUrl(currentQuestion.schemaImage)}
-                      alt="Schema diagram"
+                      src={currentQuestion.dynamicTableInfo.schemaImageUrl}
+                      alt="Schema"
                       className="max-w-full h-auto rounded-md border"
                     />
                   </div>
@@ -823,7 +756,88 @@ const Questions = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
+      </Dialog> */}
+
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {currentQuestion?.title}
+            </DialogTitle>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <StatusBadge status={currentQuestion?.difficulty.toLowerCase() || ''} />
+              <span className="status-badge bg-gray-100 text-gray-800">
+                {currentQuestion?.dbType}
+              </span>
+              <span className="status-badge bg-blue-100 text-blue-800">
+                {currentQuestion?.companyId}
+              </span>
+            </div>
+          </DialogHeader>
+
+          <Tabs defaultValue="content">
+            <TabsList className="grid grid-cols-4">
+              <TabsTrigger value="content">Question</TabsTrigger>
+              <TabsTrigger value="schema">Schema</TabsTrigger>
+              <TabsTrigger value="queries">Solution Query</TabsTrigger>
+              <TabsTrigger value="solution">Solution</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="content" className="mt-4">
+              <div className="p-4 border rounded-md bg-white">
+                <div
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.questionContent || '' }}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="schema" className="mt-4">
+              <div className="p-4 border rounded-md bg-white">
+                <div
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.dynamicTableInfo?.schemaContent || 'No schema information provided.' }}
+                />
+                {currentQuestion?.schemaImage && (
+                  <div className="mt-4">
+                    <img
+                      src={getImageUrl(currentQuestion.schemaImage)}
+                      alt="Schema diagram"
+                      className="max-w-full h-auto rounded-md border"
+                    />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="queries" className="mt-4">
+              <div className="p-4 border rounded-md bg-gray-50">
+                <pre className="whitespace-pre-wrap font-mono text-sm">
+                  {currentQuestion?.solutionQuery || 'No queries provided.'}
+                </pre>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="solution" className="mt-4">
+              <div className="p-4 border rounded-md bg-gray-50">
+                <div
+                  className="prose max-w-none font-mono text-sm"
+                  dangerouslySetInnerHTML={{ __html: currentQuestion?.solution || 'No solution provided.' }}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button
+              onClick={() => setIsPreviewDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
+
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

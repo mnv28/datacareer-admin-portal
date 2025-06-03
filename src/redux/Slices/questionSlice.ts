@@ -3,11 +3,22 @@ import { apiInstance } from "../../api/axiosApi";
 import { AxiosError } from 'axios';
 
 interface QuestionResponse {
+
   id: number;
   title: string;
   companyId: number;
+  databaseName:string,
+  topicName:string,
+  companyname:string,
+  company: {
+    id: number;
+    name: string;
+  };
   topicId?: number;
-  topic?: string;
+  topic: {
+    id: number;
+    name: string;
+  };
   dbType: string;
   difficulty: string;
   status: string;
@@ -19,14 +30,28 @@ interface QuestionResponse {
   solutionQuery?: string;
   createdAt: string;
   updatedAt: string;
+  dynamicTableInfo?: {
+    databaseName: string;
+    schemaContent: string;
+    schemaImageUrl: string;
+  };
+  dynamicTableInfoId?: number;
+  userId?: number | null;
 }
 
 export interface Question {
   id: number;
   title: string;
   companyId: number;
-  topic: string;
+  company: {
+    id: number;
+    name: string;
+  };
   topicId?: number;
+  topic: {
+    id: number;
+    name: string;
+  };
   dbType: string;
   type?: string;
   difficulty: string;
@@ -41,6 +66,15 @@ export interface Question {
   solutionQuery?: string;
   createdAt: string;
   updatedAt: string;
+  dynamicTableInfoId?: string;
+  dynamicTableInfo?: {
+    databaseName: string;
+    schemaContent: string;
+    schemaImageUrl: string;
+  };
+  companyname?: string;
+  topicName?: string;
+  databaseName?: string;
 }
 
 interface QuestionState {
@@ -71,21 +105,39 @@ const initialState: QuestionState = {
 
 const transformQuestion = (question: QuestionResponse): Question => {
   // Parse the query JSON to extract solutionQuery if it exists
+  console.log("topicId question question" ,question);
+  
   let solutionQuery = '';
   try {
-    const queryData = JSON.parse(question.query);
-    solutionQuery = queryData.solutionQuery || '';
+    // Only parse if question.query is a non-empty string and looks like JSON
+    if (typeof question.query === 'string' && question.query.startsWith('{') && question.query.endsWith('}')) {
+       const queryData = JSON.parse(question.query);
+       solutionQuery = queryData.solutionQuery || '';
+    }
   } catch (e) {
     // If parsing fails, use empty string
     solutionQuery = '';
   }
 
-  return {
-    ...question,
-    topic: question.topic || '',
-    topicId: question.topicId || (question.topic ? parseInt(question.topic) : 0),
-    solutionQuery: question.solutionQuery || solutionQuery
+  // Ensure company and topic are included as objects if they exist in the response
+  const transformedQuestion: Question = {
+    ...question, // Spread original properties (includes id, title, companyId, dbType, etc.)
+    // Include flat properties from API response
+    companyname: question.companyname,
+    topicName: question.topicName,
+    databaseName: question.databaseName,
+    // Use topicId from the response
+    topicId: question.topicId,
+    solutionQuery: question.solutionQuery || solutionQuery,
+    dynamicTableInfoId: question.dynamicTableInfoId?.toString() || '',
   };
+
+  // Add console logs to inspect the transformed object just before returning
+  console.log("Transformed Question:", transformedQuestion);
+  console.log("Transformed Question Company:", transformedQuestion.company);
+  console.log("Transformed Question Topic:", transformedQuestion.topic);
+
+  return transformedQuestion;
 };
 
 export const fetchQuestions = createAsyncThunk(
@@ -110,9 +162,11 @@ export const fetchQuestions = createAsyncThunk(
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+      console.log("response =",response.data.data);
+      
       
       // Transform the response data to match our Question interface
-      const questions = (response.data.questions || []).map(transformQuestion);
+      const questions = (response.data.data || []).map(transformQuestion);
       
       return questions;
     } catch (error) {
@@ -132,7 +186,14 @@ export const createQuestion = createAsyncThunk(
           'Content-Type': 'multipart/form-data',
         }
       });
-      return transformQuestion(response.data.question);
+
+      // API response structure is likely { success: true, data: { ...new_question... } }
+      // Access the new question from response.data.data
+      const newQuestion = response.data.data; // <-- Access data property
+
+      // Transform the new question object and return it
+      return transformQuestion(newQuestion); // <-- Use the corrected object
+
     } catch (error) {
       const axiosError = error as AxiosError<{ message: string }>;
       return rejectWithValue(axiosError.response?.data?.message || 'Failed to create question');
@@ -147,10 +208,16 @@ export const updateQuestion = createAsyncThunk(
       const response = await apiInstance.put(`/api/question/admin/update/${id}`, data, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'multipart/form-data',
         }
       });
-      return transformQuestion(response.data.question);
+
+      // Response structure is { success: true, data: { ...updated_question... } }
+      // Access the updated question from response.data.data
+      const updatedQuestion = response.data.data; // <-- Access data property
+
+      // Transform the updated question object and return it
+      return transformQuestion(updatedQuestion); // <-- Use the corrected object
+
     } catch (error) {
       const axiosError = error as AxiosError<{ message: string }>;
       return rejectWithValue(axiosError.response?.data?.message || 'Failed to update question');
@@ -209,6 +276,7 @@ const questionSlice = createSlice({
       .addCase(createQuestion.fulfilled, (state, action) => {
         state.loading = false;
         state.questions.push(action.payload);
+        state.error = null;
       })
       .addCase(createQuestion.rejected, (state, action) => {
         state.loading = false;
@@ -225,6 +293,7 @@ const questionSlice = createSlice({
         if (index !== -1) {
           state.questions[index] = action.payload;
         }
+        state.error = null;
       })
       .addCase(updateQuestion.rejected, (state, action) => {
         state.loading = false;
@@ -238,6 +307,7 @@ const questionSlice = createSlice({
       .addCase(deleteQuestion.fulfilled, (state, action) => {
         state.loading = false;
         state.questions = state.questions.filter(question => question.id !== action.payload);
+        state.error = null;
       })
       .addCase(deleteQuestion.rejected, (state, action) => {
         state.loading = false;

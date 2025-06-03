@@ -34,7 +34,7 @@ const statusOptions = [
 const Users = () => {
   const { toast } = useToast();
   const dispatch = useDispatch<AppDispatch>();
-  const { users, loading, error, filters } = useSelector((state: RootState) => state.user);
+  const { users, loading, error, filters } = useSelector((state: RootState) => state.users);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState<UserType | null>(null);

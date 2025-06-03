@@ -23,16 +23,10 @@ import {
   updateDatabase,
   deleteDatabase,
   setFilters,
-  Database
+  Database,
+  fetchDatabaseById,
 } from '@/redux/Slices/databaseSlice';
-import { Table } from '@/redux/Slices/tableSlice';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { fetchDynamicTables } from '@/redux/Slices/tableSlice';
 
 const DatabasePage = () => {
   const { toast } = useToast();
@@ -43,6 +37,7 @@ const DatabasePage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentDatabase, setCurrentDatabase] = useState<Database | null>(null);
+  console.log("currentDatabase ===>", currentDatabase);
   const [formData, setFormData] = useState<Partial<Database>>({
     name: '',
     tables: [],
@@ -58,7 +53,15 @@ const DatabasePage = () => {
   // Handle form data change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle file upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, schemaImage: file }));
+    }
   };
 
   // Handle table selection
@@ -72,15 +75,26 @@ const DatabasePage = () => {
     }));
   };
 
-  // Open dialog for creating or editing a database
-  const openDialog = (database: Database | null = null) => {
+
+  const openDialog = async (database: Database | null = null) => {
+    dispatch(fetchDynamicTables());
     if (database) {
-      setCurrentDatabase(database);
+      // Fetch the latest data for this database
+      const result = await dispatch(fetchDatabaseById(database.id)).unwrap();
+      setCurrentDatabase({
+        id: result.id,
+        name: result.databaseName,
+        tables: result.tables.map((t: any) => t.id),
+        schemaContent: result.schemaContent,
+        schemaImage: result.schemaImageUrl,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+      });
       setFormData({
-        name: database.name,
-        tables: database.tables,
-        schemaContent: database.schemaContent,
-        schemaImage: database.schemaImage,
+        name: result.databaseName,
+        tables: result.tables.map((t: any) => t.id),
+        schemaContent: result.schemaContent,
+        schemaImage: result.schemaImageUrl,
       });
     } else {
       setCurrentDatabase(null);
@@ -103,7 +117,7 @@ const DatabasePage = () => {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.tables?.length || !formData.schemaContent) {
       toast({
         title: "Error",
@@ -112,25 +126,25 @@ const DatabasePage = () => {
       });
       return;
     }
-    
+
     try {
       if (currentDatabase) {
         // Update existing database
-        await dispatch(updateDatabase({ id: currentDatabase.id, data: formData }));
+        await dispatch(updateDatabase({ id: currentDatabase.id, data: formData })).unwrap();
         toast({
           title: "Success",
           description: "Database updated successfully",
         });
       } else {
         // Create new database
-        await dispatch(createDatabase(formData));
+        await dispatch(createDatabase(formData)).unwrap();
         toast({
           title: "Success",
           description: "Database created successfully",
         });
       }
       setIsDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to save database",
@@ -280,21 +294,19 @@ const DatabasePage = () => {
 
             <div>
               <Label htmlFor="schemaImage">Schema/ERD Image</Label>
+              {formData.schemaImage && typeof formData.schemaImage === 'string' && (
+                <img
+                  src={formData.schemaImage}
+                  alt="Schema/ERD"
+                  style={{ maxWidth: '50px', marginBottom: '10px' }}
+                />
+              )}
               <Input
                 id="schemaImage"
                 name="schemaImage"
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setFormData(prev => ({ ...prev, schemaImage: reader.result as string }));
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
+                onChange={handleFileUpload}
                 className="mt-1"
               />
               <p className="text-xs text-gray-500 mt-1">

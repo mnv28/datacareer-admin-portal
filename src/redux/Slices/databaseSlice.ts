@@ -1,28 +1,17 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { Table } from './tableSlice';
+import { apiInstance } from "@/api/axiosApi"; // If you use axios instance
 
 export interface Database {
   id: number;
   name: string;
   tables: number[]; // Array of table IDs
   schemaContent: string;
-  schemaImage: string | null;
+  schemaImage: string | File | null;
   createdAt: string;
   updatedAt: string;
 }
 
-// Static data for testing
-const staticDatabases: Database[] = [
-  {
-    id: 1,
-    name: "E-commerce Database",
-    tables: [1, 2, 3], // References to Users, Products, and Orders tables
-    schemaContent: "This database contains tables for managing an e-commerce platform:\n- Users: Store user information\n- Products: Store product catalog\n- Orders: Track customer orders",
-    schemaImage: null,
-    createdAt: "2024-03-15T10:00:00Z",
-    updatedAt: "2024-03-15T10:00:00Z"
-  }
-];
+
 
 interface DatabaseState {
   databases: Database[];
@@ -34,7 +23,7 @@ interface DatabaseState {
 }
 
 const initialState: DatabaseState = {
-  databases: staticDatabases,
+  databases: [],
   loading: false,
   error: null,
   filters: {
@@ -44,90 +33,201 @@ const initialState: DatabaseState = {
 
 export const fetchDatabases = createAsyncThunk(
   'database/fetchAll',
-  async (filters: { search?: string }, { rejectWithValue }) => {
+  async (filters: { search?: string }, { getState, rejectWithValue }) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      let filteredDatabases = [...staticDatabases];
+      const state: any = getState();
+      const token = state.auth?.token;
+
+      const response = await apiInstance.get('/api/dynamicTableInfo/admin', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = response.data.data || response.data;
+
+      // Map API fields to your Database type
+      const mapped = data.map((db: any) => ({
+        id: db.id,
+        name: db.databaseName,
+        tables: db.dynamicTableIds || db.tables || [],
+        schemaContent: db.schemaContent,
+        schemaImage: db.schemaImageUrl || null,
+        createdAt: db.createdAt,
+        updatedAt: db.updatedAt,
+      }));
+
+      // Optionally filter on client
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
-        filteredDatabases = filteredDatabases.filter(db => 
+        return mapped.filter((db: any) =>
           db.name.toLowerCase().includes(searchLower) ||
           db.schemaContent.toLowerCase().includes(searchLower)
         );
       }
-      return filteredDatabases;
-    } catch (error) {
-      return rejectWithValue('Failed to fetch databases');
+      return mapped;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch databases');
     }
   }
 );
 
 export const createDatabase = createAsyncThunk(
   'database/create',
-  async (data: Partial<Database>, { rejectWithValue }) => {
+  async (data: Partial<Database>, { getState, rejectWithValue }) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const newDatabase: Database = {
-        id: staticDatabases.length + 1,
-        name: data.name || '',
-        tables: data.tables || [],
-        schemaContent: data.schemaContent || '',
-        schemaImage: data.schemaImage || null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      const state: any = getState();
+      const token = state.auth?.token;
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('dynamicTableIds', JSON.stringify(data.tables));
+      formDataToSend.append('schemaContent', data.schemaContent || '');
+      formDataToSend.append('databaseName', data.name || '');
+
+      if (data.schemaImage) {
+        if (data.schemaImage instanceof File) {
+          formDataToSend.append('schemaImageUrl', data.schemaImage);
+        } else if (typeof data.schemaImage === 'string') {
+          const response = await fetch(data.schemaImage);
+          const blob = await response.blob();
+          formDataToSend.append('schemaImageUrl', blob, 'schema-image.jpg');
+        }
+      }
+      // const response = await apiInstance.post('/api/dynamicTableInfo/admin', formDataToSend, {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      // });
+      const response = await fetch('http://localhost:3000/api/dynamicTableInfo/admin', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formDataToSend,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save database');
+      }
+
+      const result = await response.json();
+      // Map API response to your Database type if needed
+      return {
+        id: result.id,
+        name: result.databaseName,
+        tables: result.dynamicTableIds || [],
+        schemaContent: result.schemaContent,
+        schemaImage: result.schemaImageUrl || null,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
       };
-      
-      return newDatabase;
-    } catch (error) {
-      return rejectWithValue('Failed to create database');
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to save database');
     }
   }
 );
 
 export const updateDatabase = createAsyncThunk(
   'database/update',
-  async ({ id, data }: { id: number; data: Partial<Database> }, { rejectWithValue }) => {
+  async ({ id, data }: { id: number; data: Partial<Database> }, { getState, rejectWithValue }) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const existingDatabase = staticDatabases.find(d => d.id === id);
-      if (!existingDatabase) {
-        throw new Error('Database not found');
+      const state: any = getState();
+      const token = state.auth?.token;
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('dynamicTableIds', JSON.stringify(data.tables));
+      formDataToSend.append('schemaContent', data.schemaContent || '');
+      formDataToSend.append('databaseName', data.name || '');
+
+      if (data.schemaImage) {
+        if (data.schemaImage instanceof File) {
+          formDataToSend.append('schemaImageUrl', data.schemaImage);
+        } else if (typeof data.schemaImage === 'string') {
+          const response = await fetch(data.schemaImage);
+          const blob = await response.blob();
+          formDataToSend.append('schemaImageUrl', blob, 'schema-image.jpg');
+        }
+      } else {
+        // If image is optional, you can send an empty string or skip this line
+        // formDataToSend.append('schemaImageUrl', '');
       }
-      
-      const updatedDatabase: Database = {
-        ...existingDatabase,
-        ...data,
-        updatedAt: new Date().toISOString()
+
+      // DO NOT set Content-Type manually!
+      const response = await fetch(`http://localhost:3000/api/dynamicTableInfo/admin/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formDataToSend,
+      });
+      console.log("response ===>", response);
+      if (!response.ok) {
+        throw new Error('Failed to update database');
+      }
+
+      const result = await response.json();
+
+      console.log("result ===>", result);
+      return {
+        id: result.id,
+        name: result.databaseName,
+        tables: result.dynamicTableIds || [],
+        schemaContent: result.schemaContent,
+        schemaImage: result.schemaImageUrl || null,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
       };
-      
-      return updatedDatabase;
-    } catch (error) {
-      return rejectWithValue('Failed to update database');
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update database');
     }
   }
 );
 
 export const deleteDatabase = createAsyncThunk(
   'database/delete',
-  async (id: number, { rejectWithValue }) => {
+  async (id: number, { getState, rejectWithValue }) => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const databaseExists = staticDatabases.some(d => d.id === id);
-      if (!databaseExists) {
-        throw new Error('Database not found');
+      const state: any = getState();
+      const token = state.auth?.token;
+
+      const response = await fetch(`http://localhost:3000/api/dynamicTableInfo/admin/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete database');
       }
-      
-      return id;
-    } catch (error) {
-      return rejectWithValue('Failed to delete database');
+
+      // Optionally, you can check the response JSON for success
+      // const result = await response.json();
+      // if (!result.success) throw new Error(result.message);
+
+      return id; // Return the deleted database's id so you can remove it from state
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to delete database');
+    }
+  }
+);
+
+export const fetchDatabaseById = createAsyncThunk(
+  'database/fetchById',
+  async (id: number, { getState, rejectWithValue }) => {
+    try {
+      const state: any = getState();
+      const token = state.auth?.token;
+      const response = await fetch(`http://localhost:3000/api/dynamicTableInfo/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch database');
+      const result = await response.json();
+      return result.data;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch database');
     }
   }
 );
@@ -152,7 +252,7 @@ const databaseSlice = createSlice({
       })
       .addCase(fetchDatabases.fulfilled, (state, action) => {
         state.loading = false;
-        state.databases = action.payload;
+        state.databases = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(fetchDatabases.rejected, (state, action) => {
         state.loading = false;

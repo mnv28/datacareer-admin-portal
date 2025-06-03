@@ -18,12 +18,12 @@ import { useToast } from '@/hooks/use-toast';
 import MonacoEditor from '@monaco-editor/react';
 import { RootState, AppDispatch } from '@/redux/store';
 import {
-  fetchTables,
   createTable,
   updateTable,
   deleteTable,
   setFilters,
-  Table
+  Table,
+  fetchDynamicTables,
 } from '@/redux/Slices/tableSlice';
 
 const Tables = () => {
@@ -41,9 +41,14 @@ const Tables = () => {
   });
 
   // Fetch tables on component mount and when filters change
+  // useEffect(() => {
+  //   dispatch(fetchTables(filters));
+  // }, [dispatch, filters]);
+
+  // Fetch dynamic tables
   useEffect(() => {
-    dispatch(fetchTables(filters));
-  }, [dispatch, filters]);
+    dispatch(fetchDynamicTables());
+  }, [dispatch]);
 
   // Handle form data change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,7 +105,11 @@ const Tables = () => {
         });
       } else {
         // Create new table
-        await dispatch(createTable(formData));
+        await dispatch(createTable({
+          name: formData.name || '',
+          query: formData.query || '',
+          insertData: formData.insertData || ''
+        }));
         toast({
           title: "Success",
           description: "Table created successfully",
@@ -136,6 +145,8 @@ const Tables = () => {
     }
   };
 
+  const safeTables = Array.isArray(tables) ? tables : [];
+
   return (
     <AdminLayout>
       <PageHeader
@@ -157,12 +168,12 @@ const Tables = () => {
           <div className="col-span-full text-center py-8 text-red-500">
             {error}
           </div>
-        ) : tables.length === 0 ? (
+        ) : safeTables.length === 0 ? (
           <div className="col-span-full text-center py-8 text-gray-500">
             No tables found
           </div>
         ) : (
-          tables.map(table => (
+          safeTables.map(table => (
             <div key={table.id} className="data-card">
               <div className="flex justify-between items-start">
                 <div>

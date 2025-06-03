@@ -54,7 +54,7 @@ const statusOptions = [
 const Companies = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { toast } = useToast();
-  const { domains, loading: domainsLoading } = useSelector((state: RootState) => state.domain);
+  const { domains, loading: domainsLoading } = useSelector((state: RootState) => state.domains);
   const { companies, loading: companiesLoading, filters, error } = useSelector((state: RootState) => state.company);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -70,7 +70,7 @@ const Companies = () => {
   
   // Fetch domains and companies when component mounts
   useEffect(() => {
-    dispatch(fetchDomains());
+    dispatch(fetchDomains({}));
     dispatch(fetchCompanies(filters));
   }, [dispatch, filters]);
 
