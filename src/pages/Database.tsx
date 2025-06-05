@@ -135,6 +135,7 @@ const DatabasePage = () => {
           title: "Success",
           description: "Database updated successfully",
         });
+        dispatch(fetchDatabases(filters));
       } else {
         // Create new database
         await dispatch(createDatabase(formData)).unwrap();
