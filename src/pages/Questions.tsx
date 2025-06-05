@@ -296,6 +296,7 @@ console.log("formData = ",formData);
           title: "Success",
           description: "Question created successfully",
         });
+        dispatch(fetchQuestions(filters));
       }
 
       setIsDialogOpen(false);

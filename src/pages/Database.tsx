@@ -142,6 +142,7 @@ const DatabasePage = () => {
           title: "Success",
           description: "Database created successfully",
         });
+        dispatch(fetchDatabases(filters));
       }
       setIsDialogOpen(false);
     } catch (error: any) {
