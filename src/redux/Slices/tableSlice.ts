@@ -85,6 +85,13 @@ export const createTable = createAsyncThunk(
       const state: any = getState();
       const token = state.auth?.token;
 
+      // Log the request payload
+      console.log('Creating table with data:', {
+        tableName: formData.name,
+        createTableQuery: formData.query,
+        insertDataQuery: formData.insertData || ''
+      });
+
       const response = await apiInstance.post(
         '/api/dynamicTable',
         {
@@ -100,16 +107,39 @@ export const createTable = createAsyncThunk(
         }
       );
 
+      // Log the response
+      console.log('Server response:', response.data);
+
       // If backend returns success: false, treat as error
       if (response.data && response.data.success === false) {
-        // Log the error for debugging
         console.error('Backend error:', response.data);
         return rejectWithValue(response.data.message || 'Failed to create table');
       }
 
-      return response.data;
+      // Return the created table data
+      return {
+        id: response.data.id,
+        name: formData.name,
+        query: formData.query,
+        insertData: formData.insertData || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create table');
+      // Log the full error
+      console.error('Error creating table:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Return a more detailed error message
+      return rejectWithValue(
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        error.message || 
+        'Failed to create table'
+      );
     }
   }
 );
@@ -118,9 +148,16 @@ export const updateTable = createAsyncThunk(
   'table/update',
   async ({ id, data }: { id: number; data: Partial<Table> }, { getState, rejectWithValue }) => {
     try {
-      // Get token from auth state (adjust as needed)
       const state: any = getState();
-      const token = state.auth?.token; // or wherever you store your JWT
+      const token = state.auth?.token;
+
+      // Log the request payload
+      console.log('Updating table with data:', {
+        id,
+        tableName: data.name,
+        createTableQuery: data.query,
+        insertDataQuery: data.insertData || ''
+      });
 
       const response = await apiInstance.put(
         `/api/dynamicTable/${id}`,
@@ -136,9 +173,32 @@ export const updateTable = createAsyncThunk(
           }
         }
       );
+
+      // Log the response
+      console.log('Server response:', response.data);
+
+      // If backend returns success: false, treat as error
+      if (response.data && response.data.success === false) {
+        console.error('Backend error:', response.data);
+        return rejectWithValue(response.data.message || 'Failed to update table');
+      }
+
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update table');
+      // Log the full error
+      console.error('Error updating table:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Return a more detailed error message
+      return rejectWithValue(
+        error.response?.data?.message || 
+        error.response?.data?.error || 
+        error.message || 
+        'Failed to update table'
+      );
     }
   }
 );
