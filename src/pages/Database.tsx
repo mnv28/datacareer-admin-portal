@@ -33,10 +33,10 @@ const DatabasePage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { databases, loading, error, filters } = useSelector((state: RootState) => state.database);
   const { tables } = useSelector((state: RootState) => state.table);
-  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentDatabase, setCurrentDatabase] = useState<Database | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<Partial<Database>>({
     name: '',
@@ -117,6 +117,7 @@ const DatabasePage = () => {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     if (!formData.name || !formData.tables?.length || !formData.schemaContent) {
       toast({
@@ -124,6 +125,7 @@ const DatabasePage = () => {
         description: "Please fill all required fields",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -152,13 +154,15 @@ const DatabasePage = () => {
         description: error.message || "Failed to save database",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Handle database deletion
   const handleDelete = async () => {
     if (!currentDatabase) return;
-    
+
     try {
       await dispatch(deleteDatabase(currentDatabase.id));
       setIsDeleteDialogOpen(false);
@@ -186,7 +190,7 @@ const DatabasePage = () => {
           </Button>
         }
       />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full text-center py-8 text-gray-500">
@@ -211,15 +215,15 @@ const DatabasePage = () => {
                   </p>
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="icon"
                     onClick={() => openDialog(database)}
                   >
                     <Pencil size={16} />
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="icon"
                     onClick={() => openDeleteDialog(database)}
                     className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
@@ -232,7 +236,7 @@ const DatabasePage = () => {
           ))
         )}
       </div>
-      
+
       {/* Create/Edit Database Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -241,13 +245,13 @@ const DatabasePage = () => {
               {currentDatabase ? 'Edit Database' : 'Create New Database'}
             </DialogTitle>
             <DialogDescription>
-              {currentDatabase 
+              {currentDatabase
                 ? 'Update the database details below.'
                 : 'Enter the database details to create a new database.'
               }
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             <div>
               <Label htmlFor="name">Database Name*</Label>
@@ -315,23 +319,31 @@ const DatabasePage = () => {
                 Upload an ERD or schema diagram image (optional).
               </p>
             </div>
-            
+
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setIsDialogOpen(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-primary-light hover:bg-primary">
-                {currentDatabase ? 'Update Database' : 'Create Database'}
+              <Button type="submit"
+                className="bg-primary-light hover:bg-primary"
+                disabled={isSubmitting}>
+                {
+                  isSubmitting
+                    ? (currentDatabase ? "Updating...." : "Creating...")
+                    : (currentDatabase ? 'Update Database' : 'Create Database')
+                }
+
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[450px]">

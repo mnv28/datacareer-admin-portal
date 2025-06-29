@@ -30,10 +30,11 @@ const Tables = () => {
   const { toast } = useToast();
   const dispatch = useDispatch<AppDispatch>();
   const { tables, loading, error, filters } = useSelector((state: RootState) => state.table);
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentTable, setCurrentTable] = useState<Table | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<Table>>({
     name: '',
     query: '',
@@ -85,13 +86,15 @@ const Tables = () => {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setIsSubmitting(true);
+
     if (!formData.name || !formData.query) {
       toast({
         title: "Error",
         description: "Please fill all required fields",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -118,11 +121,13 @@ const Tables = () => {
     const tableName = createTableMatch[1];
 
     // Extract columns from CREATE TABLE statement
-    const createTableColumns = formData.query
-      .match(/\(([\s\S]*?)\)/)?.[1]
-      ?.split(',')
+    let columnsSection = formData.query.match(/\(([\s\S]*?)\)/)?.[1] || '';
+    // Remove CHECK constraints with IN (...) to avoid splitting on those commas
+    columnsSection = columnsSection.replace(/CHECK\\s*\\(.*?IN\\s*\\([^)]+\\)\\)/gi, '');
+    const createTableColumns = columnsSection
+      .split(',')
       .map(col => col.trim().split(/\s+/)[0].toLowerCase())
-      .filter(Boolean) || [];
+      .filter(Boolean);
 
     // Validate INSERT statements if provided
     if (formData.insertData) {
@@ -182,7 +187,7 @@ const Tables = () => {
         return;
       }
     }
-    
+
     try {
       if (currentTable) {
         // Update existing table
@@ -196,15 +201,15 @@ const Tables = () => {
           newInsertData: formData.insertData
         });
 
-        const resultAction = await dispatch(updateTable({ 
-          id: currentTable.id, 
+        const resultAction = await dispatch(updateTable({
+          id: currentTable.id,
           data: {
             name: formData.name,
             query: formData.query,
             insertData: formData.insertData
           }
         }));
-        
+
         if (updateTable.fulfilled.match(resultAction)) {
           // Show success message and update UI
           toast({
@@ -215,12 +220,12 @@ const Tables = () => {
           setIsDialogOpen(false);
         } else if (updateTable.rejected.match(resultAction)) {
           // Show backend error in toast
-          const errorMessage = typeof resultAction.payload === "string" 
-            ? resultAction.payload 
+          const errorMessage = typeof resultAction.payload === "string"
+            ? resultAction.payload
             : "Failed to update table. Please check the console for details.";
-            
+
           console.error('Table update failed:', resultAction.payload);
-          
+
           toast({
             title: "Error",
             description: errorMessage,
@@ -243,12 +248,12 @@ const Tables = () => {
 
         if (createTable.rejected.match(resultAction)) {
           // Show backend error in toast
-          const errorMessage = typeof resultAction.payload === "string" 
-            ? resultAction.payload 
+          const errorMessage = typeof resultAction.payload === "string"
+            ? resultAction.payload
             : "Failed to save table. Please check the console for details.";
-            
+
           console.error('Table creation failed:', resultAction.payload);
-          
+
           toast({
             title: "Error",
             description: errorMessage,
@@ -270,13 +275,15 @@ const Tables = () => {
         description: error.message || "Failed to save table",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Handle table deletion
   const handleDelete = async () => {
     if (!currentTable) return;
-    
+
     try {
       await dispatch(deleteTable(currentTable.id));
       setIsDeleteDialogOpen(false);
@@ -306,7 +313,7 @@ const Tables = () => {
           </Button>
         }
       />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full text-center py-8 text-gray-500">
@@ -328,15 +335,15 @@ const Tables = () => {
                   <h3 className="text-lg font-medium">{table.name}</h3>
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="icon"
                     onClick={() => openDialog(table)}
                   >
                     <Pencil size={16} />
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="icon"
                     onClick={() => openDeleteDialog(table)}
                     className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
@@ -349,7 +356,7 @@ const Tables = () => {
           ))
         )}
       </div>
-      
+
       {/* Create/Edit Table Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -358,13 +365,13 @@ const Tables = () => {
               {currentTable ? 'Edit Table' : 'Create New Table'}
             </DialogTitle>
             <DialogDescription>
-              {currentTable 
+              {currentTable
                 ? 'Update the table details below.'
                 : 'Enter the table details to create a new table.'
               }
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             <div>
               <Label htmlFor="name">Table Name*</Label>
@@ -425,23 +432,32 @@ const Tables = () => {
                 Write the INSERT queries here. Example: INSERT INTO table_name (column1, column2) VALUES (value1, value2);
               </p>
             </div>
-            
+
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setIsDialogOpen(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-primary-light hover:bg-primary">
-                {currentTable ? 'Update Table' : 'Create Table'}
+              <Button type="submit"
+                className="bg-primary-light hover:bg-primary"
+                disabled={isSubmitting}
+              >
+                {
+                  isSubmitting
+                    ? (currentTable ? "Updating..." : "Createing...")
+                    : (currentTable ? 'Update Table' : 'Create Table')
+                }
+
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[450px]">

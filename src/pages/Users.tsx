@@ -31,6 +31,17 @@ const statusOptions = [
   { value: 'inactive', label: 'Inactive' },
 ];
 
+function formatDateTime(dateString: string) {
+  const date = new Date(dateString);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const HH = String(date.getHours()).padStart(2, '0');
+  const MM = String(date.getMinutes()).padStart(2, '0');
+  const SS = String(date.getSeconds()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${HH}:${MM}:${SS}`;
+}
+
 const Users = () => {
   const { toast } = useToast();
   const dispatch = useDispatch<AppDispatch>();
@@ -146,7 +157,9 @@ const Users = () => {
                     <td className="font-medium">{user.name}</td>
                     <td className="whitespace-nowrap">{user.email}</td>
                     <td className="text-center">{user.totalAttempted}</td>
-                    <td className="whitespace-nowrap">{user.lastLogin || 'Never'}</td>
+                    <td className="whitespace-nowrap">
+                      {user.lastLogin ? formatDateTime(user.lastLogin) : 'Never'}
+                    </td>
                     <td>
                       <StatusBadge
                         status={user.status}
@@ -232,7 +245,7 @@ const Users = () => {
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Last Login</h4>
-                    <p className="text-lg font-medium mt-1">{currentUser.lastLogin || 'Never'}</p>
+                    <p className="text-lg font-medium mt-1">{currentUser.lastLogin ? formatDateTime(currentUser.lastLogin) : 'Never'}</p>
                   </div>
                 </div>
               </div>

@@ -16,16 +16,20 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { RootState, AppDispatch } from '@/redux/store';
 import { fetchSubmissions, setFilters, Submission } from '@/redux/Slices/submissionSlice';
+import { Label } from 'recharts';
 
 // Filter options
 const dbTypeOptions = [
   { value: 'MySQL', label: 'MySQL' },
-  { value: 'PostgreSQL', label: 'PostgreSQL' },
+  // { value: 'PostgreSQL', label: 'PostgreSQL' },
 ];
 
 const statusOptions = [
+  { value: '', label: 'All' },
   { value: 'passed', label: 'Passed' },
-  { value: 'failed', label: 'Failed' },
+  // { value: 'failed', label: 'Failed' },
+  { value: 'error', label: 'Error' },
+  { value: 'mismatch', label: 'MisMatch' }
 ];
 
 const Submissions = () => {
@@ -33,20 +37,20 @@ const Submissions = () => {
   const { toast } = useToast();
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [currentSubmission, setCurrentSubmission] = useState<Submission | null>(null);
-  
+
   // Redux state
   const { submissions, loading, error, filters } = useSelector((state: RootState) => state.submissions);
-  
+
   // Fetch submissions
   useEffect(() => {
     dispatch(fetchSubmissions(filters));
   }, [dispatch, filters]);
-  
+
   // Handle filters
   const handleDbTypeFilter = (dbType: string) => {
     dispatch(setFilters({ dbType }));
   };
-  
+
   const handleStatusFilter = (status: string) => {
     dispatch(setFilters({ status }));
   };
@@ -54,7 +58,7 @@ const Submissions = () => {
   const handleSearch = (search: string) => {
     dispatch(setFilters({ search }));
   };
-  
+
   // Open submission details dialog
   const openDetailsDialog = (submission: Submission) => {
     setCurrentSubmission(submission);
@@ -71,14 +75,14 @@ const Submissions = () => {
       });
     }
   }, [error, toast]);
-  
+
   return (
     <AdminLayout>
       <PageHeader
         title="Submissions"
         description="Review user question submissions"
       />
-      
+
       <SearchFilter
         searchPlaceholder="Search submissions..."
         onSearch={handleSearch}
@@ -90,14 +94,14 @@ const Submissions = () => {
             onChange: handleDbTypeFilter,
           },
           {
-            name: "Status",
+            name: "Select Status",
             options: statusOptions,
             value: filters.status,
             onChange: handleStatusFilter,
           },
         ]}
       />
-      
+
       <div className="data-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -137,18 +141,28 @@ const Submissions = () => {
                     <td>{submission.question}</td>
                     <td>{submission.dbType}</td>
                     <td>
-                      <StatusBadge
+                      {/* <StatusBadge
                         status={submission.status}
                         className={submission.status === 'passed' 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                         }
+                      /> */}
+                      <StatusBadge
+                        status={submission.status}
+                        className={
+                          submission.status === 'passed'
+                            ? 'bg-green-100 text-green-800'
+                            : submission.status === 'mismatch'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                        }
                       />
                     </td>
                     <td className="whitespace-nowrap">{submission.dateTime}</td>
                     <td>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => openDetailsDialog(submission)}
                         className="flex items-center gap-1"
@@ -163,14 +177,14 @@ const Submissions = () => {
           </table>
         </div>
       </div>
-      
+
       {/* Submission Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Submission Details</DialogTitle>
           </DialogHeader>
-          
+
           {currentSubmission && (
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
@@ -194,8 +208,8 @@ const Submissions = () => {
                   <p className="text-sm font-medium text-gray-500">Status</p>
                   <StatusBadge
                     status={currentSubmission.status}
-                    className={currentSubmission.status === 'passed' 
-                      ? 'bg-green-100 text-green-800' 
+                    className={currentSubmission.status === 'passed'
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
                     }
                   />
@@ -203,7 +217,7 @@ const Submissions = () => {
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button onClick={() => setIsDetailsDialogOpen(false)}>
               Close

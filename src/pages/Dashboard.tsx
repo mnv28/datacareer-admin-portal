@@ -19,6 +19,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { fetchSummaryCounts } from "@/redux/Slices/summarySlice";
 import type { RootState, AppDispatch } from "@/redux/store";
+import flowimage from "../../public/Datacareer Admin User Guide.png"
 
 // Dummy data for charts
 const difficultyData = [
@@ -84,8 +85,12 @@ const Dashboard = () => {
           change={{ value: "5%", positive: true }}
         />
       </div>
+
+      <div className="w-full h-96 flex justify-center items-center">
+        <img src={flowimage} alt="DataCareer Admin User Guide" className="w-auto h-full max-w-full object-contain" />
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="data-card">
           <h2 className="text-lg font-semibold mb-4">Questions by Difficulty</h2>
           <div className="h-80">
@@ -179,7 +184,7 @@ const Dashboard = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </div> */}
     </AdminLayout>
   );
 };

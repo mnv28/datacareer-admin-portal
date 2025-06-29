@@ -30,21 +30,21 @@ import type { Domain } from '@/redux/Slices/domainSlice';
 interface CompanyFormData {
   name: string;
   domains: number[];
-  category: string;
+  // category: string;
   status: string;
   logo: string | File;
 }
 
-const categoryOptions = [
-  { value: 'Tech', label: 'Tech' },
-  { value: 'Social Media', label: 'Social Media' },
-  { value: 'E-commerce', label: 'E-commerce' },
-  { value: 'Entertainment', label: 'Entertainment' },
-  { value: 'Travel', label: 'Travel' },
-  { value: 'Music', label: 'Music' },
-  { value: 'Transportation', label: 'Transportation' },
-  { value: 'Professional', label: 'Professional' },
-];
+// const categoryOptions = [
+//   { value: 'Tech', label: 'Tech' },
+//   { value: 'Social Media', label: 'Social Media' },
+//   { value: 'E-commerce', label: 'E-commerce' },
+//   { value: 'Entertainment', label: 'Entertainment' },
+//   { value: 'Travel', label: 'Travel' },
+//   { value: 'Music', label: 'Music' },
+//   { value: 'Transportation', label: 'Transportation' },
+//   { value: 'Professional', label: 'Professional' },
+// ];
 
 const statusOptions = [
   { value: 'active', label: 'Active' },
@@ -62,11 +62,12 @@ const Companies = () => {
   const [formData, setFormData] = useState<CompanyFormData>({
     name: '',
     domains: [],
-    category: '',
+    // category: '',
     status: 'active',
     logo: '',
   });
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Fetch domains and companies when component mounts
   useEffect(() => {
@@ -79,9 +80,9 @@ const Companies = () => {
     dispatch(setFilters({ search: term }));
   };
   
-  const handleCategoryFilter = (category: string) => {
-    dispatch(setFilters({ category }));
-  };
+  // const handleCategoryFilter = (category: string) => {
+  //   dispatch(setFilters({ category }));
+  // };
   
   const handleStatusFilter = (status: string) => {
     dispatch(setFilters({ status }));
@@ -110,8 +111,8 @@ const Companies = () => {
       setFormData({
         name: company.name,
         domains: company.Domains.map(d => d.id),
-        category: company.category,
-        status: company.status,
+        // category: company.category,
+        status: company.status.toLowerCase(),
         logo: company.logo,
       });
       setLogoPreview(company.logo);
@@ -120,8 +121,8 @@ const Companies = () => {
       setFormData({
         name: '',
         domains: [],
-        category: '',
-        status: 'active',
+        // category: '',
+        status: '',
         logo: '',
       });
       setLogoPreview('');
@@ -169,20 +170,21 @@ const Companies = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.domains?.length || !formData.category || !formData.logo) {
+    if (!formData.name || !formData.domains?.length || !formData.logo || !formData.status) {
       toast({
         title: "Error",
-        description: "Please fill all required fields including company logo",
+        description: "Please fill all required fields including company logo and status",
         variant: "destructive",
       });
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name);
       formDataToSend.append('domains', JSON.stringify(formData.domains));
-      formDataToSend.append('category', formData.category);
+      // formDataToSend.append('category', formData.category);
       formDataToSend.append('status', formData.status || 'active');
 
       // If logo is a File object (from file input)
@@ -235,6 +237,8 @@ const Companies = () => {
         description: error as string || "Failed to save company",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -258,6 +262,10 @@ const Companies = () => {
     }
   };
   
+  const filteredCompanies = companies.filter(company =>
+    company.name.toLowerCase().includes(filters.search?.toLowerCase() || '')
+  );
+  
   return (
     <AdminLayout>
       <PageHeader
@@ -271,15 +279,15 @@ const Companies = () => {
       />
       
       <SearchFilter
-        searchPlaceholder="Search companies..."
+        searchPlaceholder="Search by company name..."
         onSearch={handleSearch}
         filters={[
-          {
-            name: "Category",
-            options: categoryOptions,
-            value: filters.category,
-            onChange: handleCategoryFilter,
-          },
+          // {
+          //   name: "Category",
+          //   options: categoryOptions,
+          //   value: filters.category,
+          //   onChange: handleCategoryFilter,
+          // },
           {
             name: "Status",
             options: statusOptions,
@@ -296,7 +304,7 @@ const Companies = () => {
               <tr>
                 <th className="pl-4 pr-6 py-3">Name</th>
                 <th>Domains</th>
-                <th>Category</th>
+                {/* <th>Category</th> */}
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -316,14 +324,14 @@ const Companies = () => {
                     {error}
                   </td>
                 </tr>
-              ) : companies.length === 0 ? (
+              ) : filteredCompanies.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-4 text-gray-500">
                     No companies found
                   </td>
                 </tr>
               ) : (
-                companies.map((company) => (
+                filteredCompanies.map((company) => (
                   <tr key={company.id} className="hover:bg-gray-50">
                     <td className="pl-4 pr-6 py-3 whitespace-nowrap">
                       <div className="flex items-center">
@@ -348,7 +356,7 @@ const Companies = () => {
                         ))}
                       </div>
                     </td>
-                    <td>{company.category}</td>
+                    {/* <td>{company.category}</td> */}
                     <td>
                       <StatusBadge status={company.status} />
                     </td>
@@ -471,8 +479,8 @@ const Companies = () => {
                 )}
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="">
+                {/* <div>
                   <Label htmlFor="category">Category*</Label>
                   <select
                     id="category"
@@ -488,17 +496,18 @@ const Companies = () => {
                       </option>
                     ))}
                   </select>
-                </div>
+                </div> */}
                 
                 <div>
                   <Label htmlFor="status">Status</Label>
                   <select
                     id="status"
                     name="status"
-                    value={formData.status || 'active'}
+                    value={formData.status}
                     onChange={handleChange}
                     className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
                   >
+                    <option value="" disabled>Select Status</option>
                     {statusOptions.map(option => (
                       <option key={option.value} value={option.value}>
                         {option.label}
@@ -551,11 +560,19 @@ const Companies = () => {
                 type="button" 
                 variant="outline" 
                 onClick={() => setIsDialogOpen(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-primary-light hover:bg-primary">
-                {currentCompany ? 'Update Company' : 'Create Company'}
+              <Button 
+                type="submit" 
+                className="bg-primary-light hover:bg-primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting 
+                  ? (currentCompany ? "Updating..." : "Creating...") 
+                  : (currentCompany ? "Update Company" : "Create Company")
+                }
               </Button>
             </DialogFooter>
           </form>

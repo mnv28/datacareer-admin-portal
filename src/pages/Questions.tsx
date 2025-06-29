@@ -50,7 +50,7 @@ import { fetchDatabases } from '@/redux/Slices/databaseSlice';
 // Filter options
 const typeOptions = [
   { value: 'MySQL', label: 'MySQL' },
-  { value: 'PostgreSQL', label: 'PostgreSQL' },
+  // { value: 'PostgreSQL', label: 'PostgreSQL' },
 ];
 
 const difficultyOptions = [
@@ -76,7 +76,6 @@ const Questions = () => {
   // console.log("tables = ",tables)
   console.log("databases = ", databases);
 
-
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
@@ -87,9 +86,9 @@ const Questions = () => {
     title: '',
     companyId: 0,
     topicId: 0,
-    dbType: 'MySQL',
-    difficulty: 'Beginner',
-    status: 'active',
+    dbType: '',
+    difficulty: '',
+    status: '',
     questionContent: '',
     // schemaContent: '',
     // schemaImage: null,
@@ -99,9 +98,7 @@ const Questions = () => {
     solutionQuery: '',
     dynamicTableInfoId: '',
   });
-console.log("formData = ",formData);
-
-  // Additional state for form submission
+  console.log("formData = ", formData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch questions, companies and topics on component mount
@@ -189,7 +186,7 @@ console.log("formData = ",formData);
       // try {
       //   const queryData = JSON.parse(question.query);
       //   console.log("queryData ===",queryData);
-      
+
       //   solutionQuery = queryData.solutionQuery || '';
       // } catch (e) {
       //   // If parsing fails, use the query as is
@@ -207,9 +204,9 @@ console.log("formData = ",formData);
         title: '',
         companyId: 0,
         topicId: 0,
-        dbType: 'MySQL',
-        difficulty: 'Beginner',
-        status: 'active',
+        dbType: '',
+        difficulty: '',
+        status: '',
         questionContent: '',
         // schemaContent: '',
         // schemaImage: null,
@@ -263,6 +260,7 @@ console.log("formData = ",formData);
       formDataToSubmit.append('difficulty', formData.difficulty.toLowerCase());
       formDataToSubmit.append('questionContent', formData.questionContent);
       formDataToSubmit.append('dynamicTableInfoId', formData.dynamicTableInfoId);
+      formDataToSubmit.append('status',formData.status);
       // formDataToSubmit.append('schemaContent', formData.schemaContent);
       // if (formData.schemaImage && isFile(formData.schemaImage)) {
       //   formDataToSubmit.append('schemaImage', formData.schemaImage);
@@ -281,6 +279,8 @@ console.log("formData = ",formData);
         formDataToSubmit.append('solutionQuery', formData.solutionQuery);
       }
 
+
+      
       if (currentQuestion) {
         // Update existing question
         await dispatch(updateQuestion({ id: currentQuestion.id, data: formDataToSubmit }));
@@ -288,6 +288,10 @@ console.log("formData = ",formData);
           title: "Success",
           description: "Question updated successfully",
         });
+        dispatch(fetchQuestions(filters));
+        setIsDialogOpen(false);
+        // Re-fetch questions to ensure all related data is up-to-date
+       
       } else {
         console.log("formDataToSubmit = ", formDataToSubmit);
         // Create new question
@@ -297,9 +301,9 @@ console.log("formData = ",formData);
           description: "Question created successfully",
         });
         dispatch(fetchQuestions(filters));
+        setIsDialogOpen(false);
       }
 
-      setIsDialogOpen(false);
     } catch (error) {
       toast({
         title: "Error",
@@ -537,10 +541,11 @@ console.log("formData = ",formData);
                   <select
                     id="dbType"
                     name="dbType"
-                    value={formData.dbType || 'MySQL'}
+                    value={formData.dbType}
                     onChange={handleChange}
                     className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
                   >
+                    <option value="" disabled>Select Type</option>
                     {typeOptions.map(option => (
                       <option key={option.value} value={option.value}>
                         {option.label}
@@ -554,10 +559,11 @@ console.log("formData = ",formData);
                   <select
                     id="difficulty"
                     name="difficulty"
-                    value={formData.difficulty || 'Beginner'}
+                    value={formData.difficulty}
                     onChange={handleChange}
                     className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
                   >
+                    <option value="" disabled>Select Difficulty</option>
                     {difficultyOptions.map(option => (
                       <option key={option.value} value={option.value}>
                         {option.label}
@@ -571,10 +577,11 @@ console.log("formData = ",formData);
                   <select
                     id="status"
                     name="status"
-                    value={formData.status || 'active'}
+                    value={formData.status}
                     onChange={handleChange}
                     className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
                   >
+                    <option value="" disabled>Select Status</option>
                     {statusOptions.map(option => (
                       <option key={option.value} value={option.value}>
                         {option.label}
@@ -672,92 +679,15 @@ console.log("formData = ",formData);
                 className="bg-primary-light hover:bg-primary"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Saving...' : currentQuestion ? 'Update Question' : 'Create Question'}
+                {isSubmitting
+                  ? (currentQuestion ? "Updating...." : "Creating...")
+                  : (currentQuestion ? 'Update Question' : 'Create Question')
+                }
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Preview Question Dialog */}
-      {/* <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {currentQuestion?.title}
-            </DialogTitle>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <StatusBadge status={currentQuestion?.difficulty.toLowerCase() || ''} />
-              <span className="status-badge bg-gray-100 text-gray-800">
-                {currentQuestion?.dbType}
-              </span>
-              <span className="status-badge bg-blue-100 text-blue-800">
-                {currentQuestion?.companyId}
-              </span>
-            </div>
-          </DialogHeader>
-
-          <Tabs defaultValue="content">
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="content">Question</TabsTrigger>
-           
-              <TabsTrigger value="solution">Solution</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="content" className="mt-4">
-              <div className="p-4 border rounded-md bg-white">
-                <div
-                  className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: currentQuestion?.questionContent || '' }}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="schema" className="mt-4">
-              <div className="p-4 border rounded-md bg-white">
-                <div
-                  className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: currentQuestion?.dynamicTableInfo?.schemaContent || 'No schema information provided.' }}
-                />
-                {currentQuestion?.dynamicTableInfo?.schemaImageUrl && (
-                  <div className="mt-4">
-                    <img
-                      src={currentQuestion.dynamicTableInfo.schemaImageUrl}
-                      alt="Schema"
-                      className="max-w-full h-auto rounded-md border"
-                    />
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="queries" className="mt-4">
-              <div className="p-4 border rounded-md bg-gray-50">
-                <pre className="whitespace-pre-wrap font-mono text-sm">
-                  {currentQuestion?.query || 'No queries provided.'}
-                </pre>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="solution" className="mt-4">
-              <div className="p-4 border rounded-md bg-gray-50">
-                <div
-                  className="prose max-w-none font-mono text-sm"
-                  dangerouslySetInnerHTML={{ __html: currentQuestion?.solution || 'No solution provided.' }}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <DialogFooter>
-            <Button
-              onClick={() => setIsPreviewDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
 
       <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
@@ -838,7 +768,6 @@ console.log("formData = ",formData);
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

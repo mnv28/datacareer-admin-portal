@@ -86,6 +86,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
     <div className="border rounded-md">
       <div className="border-b p-2 flex flex-wrap gap-1">
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -94,6 +95,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <Bold size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -102,6 +104,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <Italic size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
@@ -111,6 +114,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         </Button>
         <div className="w-px h-6 bg-gray-200 mx-1" />
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -119,6 +123,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <Heading1 size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
@@ -127,6 +132,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <Heading2 size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
@@ -136,6 +142,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         </Button>
         <div className="w-px h-6 bg-gray-200 mx-1" />
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -144,6 +151,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <List size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
@@ -153,6 +161,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         </Button>
         <div className="w-px h-6 bg-gray-200 mx-1" />
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().setTextAlign('left').run()}
@@ -161,6 +170,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <AlignLeft size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().setTextAlign('center').run()}
@@ -169,6 +179,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <AlignCenter size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().setTextAlign('right').run()}
@@ -178,6 +189,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         </Button>
         <div className="w-px h-6 bg-gray-200 mx-1" />
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={addTable}
@@ -186,6 +198,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         </Button>
         <div className="flex items-center gap-1 px-1">
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={addRow}
@@ -195,6 +208,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
             <Rows size={16} />
           </Button>
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={removeRow}
@@ -206,6 +220,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         </div>
         <div className="flex items-center gap-1 px-1">
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={addColumn}
@@ -215,6 +230,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
             <Columns size={16} />
           </Button>
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={removeColumn}
@@ -226,6 +242,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
         </div>
         <div className="w-px h-6 bg-gray-200 mx-1" />
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().undo().run()}
@@ -234,6 +251,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <Undo size={16} />
         </Button>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().redo().run()}
@@ -242,7 +260,10 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
           <Redo size={16} />
         </Button>
       </div>
-      <EditorContent editor={editor} className="prose max-w-none p-4 min-h-[200px]" />
+      <EditorContent
+        editor={editor}
+        className="prose max-w-none p-4 min-h-[200px] list-disc list-inside text-black"
+      />
     </div>
   );
 };

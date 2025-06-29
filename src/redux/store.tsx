@@ -51,7 +51,6 @@ export interface RootState {
         error: string | null;
         filters: {
             search: string;
-            category: string;
             status: string;
         };
     };
@@ -166,7 +165,6 @@ export const store = configureStore({
             error: null,
             filters: {
                 search: '',
-                category: '',
                 status: ''
             }
         },

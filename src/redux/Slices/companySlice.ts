@@ -7,7 +7,7 @@ import { AxiosError } from 'axios';
 export interface Company {
   id: number;
   name: string;
-  category: string;
+  // category: string;
   status: string;
   logo: string;
   createdAt: string;
@@ -22,7 +22,7 @@ interface CompanyState {
   error: string | null;
   filters: {
     search: string;
-    category: string;
+    // category: string;
     status: string;
   };
 }
@@ -33,7 +33,7 @@ const initialState: CompanyState = {
   error: null,
   filters: {
     search: '',
-    category: '',
+    // category: '',
     status: ''
   }
 };
@@ -44,7 +44,7 @@ export const fetchCompanies = createAsyncThunk(
     try {
       const params = new URLSearchParams();
       if (filters.search) params.append('search', filters.search);
-      if (filters.category) params.append('category', filters.category);
+      // if (filters.category) params.append('category', filters.category);
       if (filters.status) params.append('status', filters.status);
 
       const response = await apiInstance.get(`/api/company/admin/get-all-companies?${params.toString()}`, {
