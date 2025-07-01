@@ -52,6 +52,23 @@ export const fetchDomains = createAsyncThunk(
   }
 );
 
+export const fetchActiveDomains = createAsyncThunk(
+  'domain/fetchActiveDomains',
+  async (_,{ rejectWithValue }) => {
+    try {
+      const response = await apiInstance.get('/api/domain/admin/getall/active', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      return response.data.domains;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      return rejectWithValue(axiosError.response?.data?.message || 'Failed to fetch active domains');
+    }
+  }
+)
+
 export const fetchDomainById = createAsyncThunk(
   'domain/fetchById',
   async (id: number, { rejectWithValue }) => {
@@ -150,6 +167,19 @@ const domainSlice = createSlice({
         state.domains = action.payload;
       })
       .addCase(fetchDomains.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      //Fetch Active Domains
+      .addCase(fetchActiveDomains.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchActiveDomains.fulfilled, (state, action) => {
+        state.loading = false;  
+        state.domains = action.payload;
+      })
+      .addCase(fetchActiveDomains.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

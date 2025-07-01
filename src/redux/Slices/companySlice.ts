@@ -60,6 +60,23 @@ export const fetchCompanies = createAsyncThunk(
   }
 );
 
+export const fetchActiveCompanies = createAsyncThunk(
+  'company/fetchActiveCompanies',
+  async (_,{ rejectWithValue }) => {
+    try {
+      const response = await apiInstance.get('/api/company/admin/getall/activeCompanies', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+        return response.data.companies;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      return rejectWithValue(axiosError.response?.data?.message || 'Failed to fetch active companies');
+    }
+  }
+)
+
 export const deleteCompany = createAsyncThunk(
   'company/delete',
   async (companyId: number, { rejectWithValue }) => {
@@ -149,6 +166,20 @@ const companySlice = createSlice({
         state.companies = action.payload || [];
       })
       .addCase(fetchCompanies.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        state.companies = [];
+      })
+      // Fetch Active Companies
+      .addCase(fetchActiveCompanies.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchActiveCompanies.fulfilled, (state, action) => {
+        state.loading = false;  
+        state.companies = action.payload || [];
+      })
+      .addCase(fetchActiveCompanies.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
         state.companies = [];

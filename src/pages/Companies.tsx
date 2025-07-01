@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDomains } from '@/redux/Slices/domainSlice';
+import { fetchActiveDomains } from '@/redux/Slices/domainSlice';
 import { fetchCompanies, setFilters, type Company, deleteCompany, updateCompany, createCompany } from '@/redux/Slices/companySlice';
 import type { RootState, AppDispatch } from '@/redux/store';
 import type { Domain } from '@/redux/Slices/domainSlice';
@@ -71,7 +71,7 @@ const Companies = () => {
   
   // Fetch domains and companies when component mounts
   useEffect(() => {
-    dispatch(fetchDomains({}));
+    dispatch(fetchActiveDomains())
     dispatch(fetchCompanies(filters));
   }, [dispatch, filters]);
 
@@ -349,7 +349,7 @@ const Companies = () => {
                     </td>
                     <td>
                       <div className="flex flex-wrap gap-1">
-                        {company.Domains.map((domain) => (
+                        {Array.isArray(company.Domains) && company.Domains.map((domain) => (
                           <Badge key={domain.id} variant="secondary">
                             {domain.name}
                           </Badge>

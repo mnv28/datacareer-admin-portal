@@ -9,6 +9,7 @@ export interface Submission {
   dbType: string;
   status: string;
   dateTime: string;
+  code: string;
 }
 
 interface SubmissionState {

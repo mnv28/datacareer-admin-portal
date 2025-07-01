@@ -41,7 +41,7 @@ import {
   setFilters,
   Question
 } from '@/redux/Slices/questionSlice';
-import { fetchCompanies } from '@/redux/Slices/companySlice';
+import { fetchActiveCompanies } from '@/redux/Slices/companySlice';
 import { fetchTopics } from '@/redux/Slices/topicSlice';
 import MonacoEditor from '@monaco-editor/react';
 import { log } from 'console';
@@ -109,7 +109,7 @@ const Questions = () => {
   // Fetch questions, companies and topics on component mount
   useEffect(() => {
     dispatch(fetchQuestions(filters));
-    dispatch(fetchCompanies({}));
+    dispatch(fetchActiveCompanies());
     dispatch(fetchTopics({}));
     dispatch(fetchDatabases(filters));
   }, [dispatch, filters]);
