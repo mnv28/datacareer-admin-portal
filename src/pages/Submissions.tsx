@@ -216,7 +216,7 @@ const Submissions = () => {
                 </div>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">Solution</p>
+                <p className="text-sm font-medium text-gray-500">Submitted Query</p>
                 <p className="mt-1">{currentSubmission.code}</p>
               </div>
             </div>

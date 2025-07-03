@@ -120,13 +120,19 @@ const Tables = () => {
     }
     const tableName = createTableMatch[1];
 
-    // Extract columns from CREATE TABLE statement
+    // Extract the section inside the parentheses
     let columnsSection = formData.query.match(/\(([\s\S]*?)\)/)?.[1] || '';
-    // Remove CHECK constraints with IN (...) to avoid splitting on those commas
-    columnsSection = columnsSection.replace(/CHECK\\s*\\(.*?IN\\s*\\([^)]+\\)\\)/gi, '');
-    const createTableColumns = columnsSection
-      .split(',')
-      .map(col => col.trim().split(/\s+/)[0].toLowerCase())
+
+    // Split by commas, but only at the top level (not inside parentheses)
+    const columnDefs = columnsSection
+      .split(/,(?![^(]*\))/) // splits on commas not inside parentheses
+      .map(col => col.trim())
+      // Ignore lines that start with constraint keywords
+      .filter(col => !/^(primary|unique|foreign|check|constraint|key)/i.test(col));
+
+    // Extract just the column names (first word before any space or parenthesis)
+    const createTableColumns = columnDefs
+      .map(col => col.match(/^["'`]?(\w+)["'`]?/)?.[1]?.toLowerCase())
       .filter(Boolean);
 
     // Validate INSERT statements if provided
@@ -154,7 +160,7 @@ const Tables = () => {
       const insertTableName = insertMatch[1];
       const insertColumns = insertMatch[2]
         .split(',')
-        .map(col => col.trim().toLowerCase())
+        .map(col => col.trim().replace(/["'`]/g, '').toLowerCase())
         .filter(Boolean);
 
       // Check if table names match
@@ -162,26 +168,6 @@ const Tables = () => {
         toast({
           title: "Error",
           description: `Table name mismatch. CREATE TABLE uses '${tableName}' but INSERT uses '${insertTableName}'`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if columns match
-      const missingColumns = createTableColumns.filter(col => !insertColumns.includes(col));
-      const extraColumns = insertColumns.filter(col => !createTableColumns.includes(col));
-
-      if (missingColumns.length > 0 || extraColumns.length > 0) {
-        let errorMessage = "Column mismatch between CREATE TABLE and INSERT statements:\n";
-        if (missingColumns.length > 0) {
-          errorMessage += `\nMissing columns in INSERT: ${missingColumns.join(', ')}`;
-        }
-        if (extraColumns.length > 0) {
-          errorMessage += `\nExtra columns in INSERT: ${extraColumns.join(', ')}`;
-        }
-        toast({
-          title: "Error",
-          description: errorMessage,
           variant: "destructive",
         });
         return;

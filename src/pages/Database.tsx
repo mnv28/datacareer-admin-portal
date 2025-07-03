@@ -300,9 +300,14 @@ const DatabasePage = () => {
 
             <div>
               <Label htmlFor="schemaImage">Schema/ERD Image</Label>
+              {
+
+                (formData.schemaImage && typeof formData.schemaImage === 'string') ? (formData.schemaImage.startsWith("http://")) ? formData.schemaImage = formData.schemaImage.replace('http://', 'https://') : '' : ''
+                
+              }
               {formData.schemaImage && typeof formData.schemaImage === 'string' && (
                 <img
-                  src={formData.schemaImage}
+                  src={formData.schemaImage.replace('http://', 'https://')}
                   alt="Schema/ERD"
                   style={{ maxWidth: '50px', marginBottom: '10px' }}
                 />
