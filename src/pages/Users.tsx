@@ -149,7 +149,7 @@ const Users = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `users_export_${userExportDateRange}.xlsx`;
+      a.download = `users_export_${userExportDateRange}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
