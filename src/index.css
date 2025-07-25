@@ -98,7 +98,7 @@
   }
 
   .data-table {
-    @apply w-full text-sm text-left;
+    @apply  text-sm text-left;
   }
   
   .data-table thead {

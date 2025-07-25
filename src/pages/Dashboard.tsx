@@ -160,6 +160,11 @@ const Dashboard = () => {
   const [selectedFields, setSelectedFields] = useState(getAllFieldValues());
   const [popoverOpen, setPopoverOpen] = useState(false);
 
+  // Preview table state
+  const [previewData, setPreviewData] = useState([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState('');
+
   // Group/parent checkbox logic
   const isGroupChecked = (groupValue) => {
     const groupFields = getGroupFieldValues(groupValue);
@@ -194,6 +199,45 @@ const Dashboard = () => {
   useEffect(() => {
     dispatch(fetchSummaryCounts());
   }, [dispatch]);
+
+  // Fetch preview data when fields or dateRange change
+  useEffect(() => {
+    const fetchPreview = async () => {
+      setPreviewLoading(true);
+      setPreviewError('');
+      try {
+        // Map frontend field values to API field names
+        const fieldMap = {
+          registeredUsers: "numberOfRegisteredUsers",
+          activeUsers: "numberOfActiveUsers",
+          avgActivePeriod: "averageActivePeriod",
+          userTier: "breakdownOfUsersByTier",
+          totalSubmissions: "numberOfSubmissions",
+          totalQuestions: "numberOfQuestions",
+          questionsByDifficulty: "breakdownOfQuestionsByDifficulty",
+          questionsByCompany: "breakdownOfQuestionsByCompany",
+          submissionsBySuccess: "breakdownOfSubmissionsBySuccessMismatch",
+          submissionsByDifficulty: "breakdownOfSubmissionsByDifficulty",
+          submissionsByCompany: "breakdownOfSubmissionsByCompany",
+        };
+        const params = new URLSearchParams();
+        params.append("dateRange", dateRange === "7d" ? "7" : dateRange === "30d" ? "30" : "all");
+        selectedFields.forEach(field => {
+          if (fieldMap[field]) {
+            params.append("fields", fieldMap[field]);
+          }
+        });
+        const response = await apiInstance.get(`/api/export/admin/previewCSV?${params.toString()}`);
+        setPreviewData(response.data);
+      } catch (err) {
+        setPreviewError('Failed to load preview');
+        setPreviewData([]);
+      } finally {
+        setPreviewLoading(false);
+      }
+    };
+    fetchPreview();
+  }, [selectedFields, dateRange]);
 
   return (
     <AdminLayout>
@@ -274,6 +318,8 @@ const Dashboard = () => {
           </div>
         }
       />
+
+      
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
@@ -302,13 +348,48 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="w-full h-96 flex justify-center items-center">
-        <img src={flowimage} alt="DataCareer Admin User Guide" className="w-auto h-full max-w-full object-contain" />
+
+    {/* Preview Table */}
+    <div className="data-card mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Preview</h2>
+        </div>
+        {previewLoading ? (
+          <div className="py-8 text-center text-gray-500">Loading preview...</div>
+        ) : previewError ? (
+          <div className="py-8 text-center text-red-500">{previewError}</div>
+        ) : previewData && previewData.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Metric</th>
+                  <th>Value</th>
+                  <th>Date Range</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previewData.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50">
+                    <td className="whitespace-nowrap">{row.category}</td>
+                    <td>{row.metric}</td>
+                    <td>{row.value}</td>
+                    <td>{row.dateRange}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-8 text-center text-gray-400">No data to display.</div>
+        )}
       </div>
+     
       
       {/* User Tier Breakdown Chart */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="data-card">
+        {/* <div className="data-card">
           <h2 className="text-lg font-semibold mb-4">User Tier Breakdown</h2>
           <div className="h-80 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -332,26 +413,8 @@ const Dashboard = () => {
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
-        {/* Active Users Over Time Chart */}
-        <div className="data-card">
-          <h2 className="text-lg font-semibold mb-4">Active Users (Last 7 Days)</h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activeUserData} margin={{ top: 5, right: 30, left: 20, bottom: 25 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="active" fill="#7692FF" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-      {/* Questions by Difficulty */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="data-card">
+        </div> */}
+           <div className="data-card">
           <h2 className="text-lg font-semibold mb-4">Questions by Difficulty</h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -372,8 +435,47 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </div>
         </div>
-        {/* Questions by Type (example) */}
+        {/* Active Users Over Time Chart */}
         <div className="data-card">
+          <h2 className="text-lg font-semibold mb-4">Active Users (Last 7 Days)</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={activeUserData} margin={{ top: 5, right: 30, left: 20, bottom: 25 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="active" fill="#7692FF" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+      {/* Questions by Difficulty */}
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"> */}
+        {/* <div className="data-card">
+          <h2 className="text-lg font-semibold mb-4">Questions by Difficulty</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={difficultyData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count">
+                  {difficultyData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div> */}
+        {/* Questions by Type (example) */}
+        {/* <div className="data-card">
           <h2 className="text-lg font-semibold mb-4">Questions by Type</h2>
           <div className="h-80 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -397,8 +499,8 @@ const Dashboard = () => {
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      </div>
+        </div> */}
+      {/* </div> */}
       {/* Add more breakdowns as needed (by company, submissions, etc.) */}
       
       <div className="data-card">

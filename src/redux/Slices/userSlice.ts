@@ -12,13 +12,14 @@ export interface User {
 }
 
 interface UserState {
-  users: User[];
+  users: any[]; // dynamic fields
   loading: boolean;
   error: string | null;
   filters: {
     search: string;
     status: string;
   };
+  fields: string[];
 }
 
 const initialState: UserState = {
@@ -28,23 +29,27 @@ const initialState: UserState = {
   filters: {
     search: '',
     status: ''
-  }
+  },
+  fields: []
 };
 
-export const fetchUsers = createAsyncThunk(
-  'user/fetchUsers',
-  async (filters: { search?: string; status?: string } = {}, { rejectWithValue }) => {
+export const fetchUsersPreview = createAsyncThunk(
+  'user/fetchUsersPreview',
+  async (
+    params: { fields: string[]; search?: string; dateRange?: string },
+    { rejectWithValue }
+  ) => {
     try {
-      const params = new URLSearchParams();
-      if (filters.search) params.append('search', filters.search);
-      if (filters.status) params.append('status', filters.status);
-
-      const response = await apiInstance.get(`/api/auth/admin/users?${params.toString()}`, {
+      const urlParams = new URLSearchParams();
+      params.fields.forEach(field => urlParams.append('fields', field));
+      if (params.search !== undefined) urlParams.append('search', params.search);
+      if (params.dateRange !== undefined) urlParams.append('dateRange', params.dateRange);
+      const response = await apiInstance.get(`/api/export/admin/previewUsersExport?${urlParams.toString()}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      return response.data.users;
+      return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<{ message: string }>;
       return rejectWithValue(axiosError.response?.data?.message || 'Failed to fetch users');
@@ -65,7 +70,7 @@ export const toggleUserStatus = createAsyncThunk(
           }
         }
       );
-      dispatch(fetchUsers());
+      dispatch(fetchUsersPreview({ fields: ['id', 'name', 'email', 'totalAttempted', 'lastLogin', 'status'] }));
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<{ message: string }>;
@@ -87,16 +92,16 @@ const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch Users
-      .addCase(fetchUsers.pending, (state) => {
+      // Fetch Users Preview
+      .addCase(fetchUsersPreview.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchUsers.fulfilled, (state, action) => {
+      .addCase(fetchUsersPreview.fulfilled, (state, action) => {
         state.loading = false;
         state.users = action.payload;
       })
-      .addCase(fetchUsers.rejected, (state, action) => {
+      .addCase(fetchUsersPreview.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

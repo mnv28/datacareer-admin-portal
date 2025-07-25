@@ -22,7 +22,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/redux/store';
-import { fetchUsers, toggleUserStatus, setFilters } from '@/redux/Slices/userSlice';
+import { fetchUsersPreview, toggleUserStatus, setFilters } from '@/redux/Slices/userSlice';
 import { User as UserType } from '@/redux/Slices/userSlice';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -74,14 +74,20 @@ const Users = () => {
     { label: "All", value: "all" },
   ];
 
-  const [userExportDateRange, setUserExportDateRange] = React.useState("7d");
+  const [userExportDateRange, setUserExportDateRange] = React.useState("all");
   const [userExportFieldsSelected, setUserExportFieldsSelected] = React.useState(userExportFields.map(f => f.value));
   const [userExportPopoverOpen, setUserExportPopoverOpen] = React.useState(false);
 
   // Fetch users on component mount and when filters change
   useEffect(() => {
-    dispatch(fetchUsers(filters));
-  }, [dispatch, filters]);
+    dispatch(
+      fetchUsersPreview({
+        fields: userExportFieldsSelected,
+        search: filters.search,
+        dateRange: userExportDateRange === '7d' ? '7' : userExportDateRange === '30d' ? '30' : 'all',
+      })
+    );
+  }, [dispatch, filters.search, userExportFieldsSelected, userExportDateRange]);
   
   // Search and filter users
   const handleSearch = (term: string) => {
@@ -154,6 +160,15 @@ const Users = () => {
     }
   }
   
+  // Calculate counts
+  const activeCount = users.filter(u => (u.status || u.Status || '').toLowerCase() === 'active').length;
+  const inactiveCount = users.filter(u => (u.status || u.Status || '').toLowerCase() === 'inactive').length;
+
+  // Filter users in UI
+  const filteredUsers = filters.status
+    ? users.filter(u => (u.status || u.Status || '').toLowerCase() === filters.status)
+    : users;
+
   return (
     <AdminLayout>
       <PageHeader
@@ -202,7 +217,8 @@ const Users = () => {
                       ? ` +${userExportFieldsSelected.length - 2} more`
                       : "")}
               </span>
-              <svg className="ml-2 h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.584l3.71-3.354a.75.75 0 111.02 1.1l-4.25 3.84a.75.75 0 01-1.02 0l-4.25-3.84a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
+              <svg className="ml-2 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.584l3.71-3.354a.75.75 0 111.02 1.1l-4.25 3.84a.75.75 0 01-1.02 0l-4.25-3.84a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
             </Button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-72 p-2">
@@ -233,50 +249,59 @@ const Users = () => {
         </Button>
       </div>
 
-      <div className="data-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="data-table">
+      {/* Add counts above the table */}
+      {/* <div className="flex gap-4 mb-2">
+        <span>Active: {activeCount}</span>
+        <span>Inactive: {inactiveCount}</span>
+      </div> */}
+
+      <div className="data-card overflow-x-auto w-full">
+        <div className="">
+          <table className="">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Total Attempted</th>
-                <th>Last Login</th>
-                <th>Status</th>
+                {userExportFields
+                  .filter(f => userExportFieldsSelected.includes(f.value))
+                  .map(field => (
+                    <th key={field.value}>{field.label}</th>
+                  ))}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4">
+                  <td colSpan={userExportFieldsSelected.length + 1} className="text-center py-4">
                     Loading...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 text-red-500">
+                  <td colSpan={userExportFieldsSelected.length + 1} className="text-center py-4 text-red-500">
                     {error}
                   </td>
                 </tr>
-              ) : users.length > 0 ? (
-                users.map((user) => (
+              ) : filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="font-medium">{user.name}</td>
-                    <td className="whitespace-nowrap">{user.email}</td>
-                    <td className="text-center">{user.totalAttempted}</td>
-                    <td className="whitespace-nowrap">
-                      {user.lastLogin ? formatDateTime(user.lastLogin) : 'Never'}
-                    </td>
-                    <td>
-                      <StatusBadge
-                        status={user.status}
-                        className={user.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                        }
-                      />
-                    </td>
+                    {userExportFields
+                      .filter(f => userExportFieldsSelected.includes(f.value))
+                      .map(field => (
+                        <td key={field.value} className="whitespace-nowrap">
+                          {field.value === 'status' && (user.status || user.Status) ? (
+                            <StatusBadge
+                              status={String(user.status || user.Status || 'unknown')}
+                              className={(user.status || user.Status)?.toLowerCase() === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'}
+                            />
+                          ) : field.value === 'lastLogin' || field.value === 'registrationDate' ? (
+                            user[field.value] ? formatDateTime(user[field.value]) : 'Never'
+                          ) : (
+                            user[field.value] ?? ''
+                          )}
+                        </td>
+                      ))}
                     <td>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -292,7 +317,7 @@ const Users = () => {
                             <RotateCcw size={16} className="mr-2" /> Reset Password
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleToggleUserStatus(user)}>
-                            {user.status === 'active' ? (
+                            {(user.status || user.Status)?.toLowerCase() === 'active' ? (
                               <>
                                 <Ban size={16} className="mr-2 text-red-500" /> Deactivate User
                               </>
@@ -309,7 +334,7 @@ const Users = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 text-gray-500">
+                  <td colSpan={userExportFieldsSelected.length + 1} className="text-center py-4 text-gray-500">
                     No users found
                   </td>
                 </tr>
