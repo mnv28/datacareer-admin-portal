@@ -26,7 +26,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { apiInstance } from "@/api/axiosApi"; // import at the top
 
-// Dummy data for charts
+// Dummy data for charts (keeping for fallback)
 const difficultyData = [
   { name: 'Beginner', count: 45, fill: '#7692FF' },
   { name: 'Intermediate', count: 30, fill: '#3D518C' },
@@ -55,7 +55,7 @@ const userTierData = [
   { name: 'Pro', value: 30 },
 ];
 
-// Dummy active user data
+// Dummy active user data (keeping for fallback)
 const activeUserData = [
   { date: '2024-05-01', active: 10 },
   { date: '2024-05-02', active: 12 },
@@ -165,6 +165,16 @@ const Dashboard = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState('');
 
+  // Difficulty chart state
+  const [difficultyChartData, setDifficultyChartData] = useState([]);
+  const [difficultyChartLoading, setDifficultyChartLoading] = useState(false);
+  const [difficultyChartError, setDifficultyChartError] = useState('');
+
+  // Active users chart state
+  const [activeUsersChartData, setActiveUsersChartData] = useState([]);
+  const [activeUsersChartLoading, setActiveUsersChartLoading] = useState(false);
+  const [activeUsersChartError, setActiveUsersChartError] = useState('');
+
   // Group/parent checkbox logic
   const isGroupChecked = (groupValue) => {
     const groupFields = getGroupFieldValues(groupValue);
@@ -199,6 +209,65 @@ const Dashboard = () => {
   useEffect(() => {
     dispatch(fetchSummaryCounts());
   }, [dispatch]);
+
+  // Fetch difficulty chart data
+  useEffect(() => {
+    const fetchDifficultyChart = async () => {
+      setDifficultyChartLoading(true);
+      setDifficultyChartError('');
+      try {
+        const response = await apiInstance.get('/api/question/chart/difficulty');
+        
+        // Map API data to chart format
+        const colorMap = {
+          beginner: '#7692FF',
+          intermediate: '#3D518C',
+          advanced: '#E9724C',
+        };
+        
+        const chartData = response.data.data.map(item => ({
+          name: item.difficulty.charAt(0).toUpperCase() + item.difficulty.slice(1),
+          count: item.count,
+          fill: colorMap[item.difficulty] || '#ABD3FA',
+        }));
+        
+        setDifficultyChartData(chartData);
+      } catch (err) {
+        setDifficultyChartError('Failed to load difficulty chart');
+        setDifficultyChartData([]);
+      } finally {
+        setDifficultyChartLoading(false);
+      }
+    };
+    
+    fetchDifficultyChart();
+  }, []);
+
+  // Fetch active users chart data
+  useEffect(() => {
+    const fetchActiveUsersChart = async () => {
+      setActiveUsersChartLoading(true);
+      setActiveUsersChartError('');
+      try {
+        const response = await apiInstance.get('/api/auth/admin/chart/active-users');
+        
+        // Map API data to chart format
+        const chartData = response.data.data.map(item => ({
+          date: item.date,
+          active: item.activeUsers,
+        }));
+        
+        setActiveUsersChartData(chartData);
+      } catch (err) {
+        setActiveUsersChartError('Failed to load active users chart');
+        setActiveUsersChartData([]);
+      } finally {
+        setActiveUsersChartLoading(false);
+      }
+    };
+    
+    fetchActiveUsersChart();
+  }, []);
 
   // Fetch preview data when fields or dateRange change
   useEffect(() => {
@@ -416,38 +485,54 @@ const Dashboard = () => {
         </div> */}
            <div className="data-card">
           <h2 className="text-lg font-semibold mb-4">Questions by Difficulty</h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={difficultyData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count">
-                  {difficultyData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-80 flex items-center justify-center">
+            {difficultyChartLoading ? (
+              <div className="text-gray-500">Loading chart...</div>
+            ) : difficultyChartError ? (
+              <div className="text-red-500">{difficultyChartError}</div>
+            ) : difficultyChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={difficultyChartData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count">
+                    {difficultyChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-gray-400">No data available</div>
+            )}
           </div>
         </div>
         {/* Active Users Over Time Chart */}
         <div className="data-card">
           <h2 className="text-lg font-semibold mb-4">Active Users (Last 7 Days)</h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activeUserData} margin={{ top: 5, right: 30, left: 20, bottom: 25 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="active" fill="#7692FF" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-80 flex items-center justify-center">
+            {activeUsersChartLoading ? (
+              <div className="text-gray-500">Loading chart...</div>
+            ) : activeUsersChartError ? (
+              <div className="text-red-500">{activeUsersChartError}</div>
+            ) : activeUsersChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={activeUsersChartData} margin={{ top: 5, right: 30, left: 20, bottom: 25 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="active" fill="#7692FF" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-gray-400">No data available</div>
+            )}
           </div>
         </div>
       </div>
