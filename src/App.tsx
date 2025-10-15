@@ -21,6 +21,7 @@ import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import DatabasePage from '@/pages/Database';
+import JobDatabase from './pages/JobDatabase';
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <DatabasePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/job-database"
+                element={
+                  <ProtectedRoute>
+                    <JobDatabase />
                   </ProtectedRoute>
                 }
               />
