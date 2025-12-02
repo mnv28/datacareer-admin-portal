@@ -119,6 +119,8 @@ const transformQuestion = (question: QuestionResponse): Question => {
     solutionQuery = '';
   }
 
+  
+
   // Ensure company and topic are included as objects if they exist in the response
   const transformedQuestion: Question = {
     ...question, // Spread original properties (includes id, title, companyId, dbType, etc.)
