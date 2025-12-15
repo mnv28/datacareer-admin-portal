@@ -91,22 +91,22 @@ const Users = () => {
       })
     );
   }, [dispatch, filters.search, userExportFieldsSelected, userExportDateRange]);
-  
+
   // Search and filter users
   const handleSearch = (term: string) => {
     dispatch(setFilters({ search: term }));
   };
-  
+
   const handleStatusFilter = (status: string) => {
     dispatch(setFilters({ status }));
   };
-  
+
   // Open user profile dialog
   const openProfileDialog = (user: UserType) => {
     setCurrentUser(user);
     setIsProfileDialogOpen(true);
   };
-  
+
   // Open reset password dialog
   const openResetPasswordDialog = (user: UserType) => {
     setCurrentUser(user);
@@ -124,11 +124,11 @@ const Users = () => {
   
   // Toggle user status (activate/deactivate)
   const handleToggleUserStatus = async (user: UserType) => {
-    console.log("user  = =",user);
-    
+    console.log("user  = =", user);
+
     const newStatus = user.status === 'active' ? 'inactive' : 'active';
-    console.log("newStatus = ",newStatus);
-    
+    console.log("newStatus = ", newStatus);
+
     try {
       await dispatch(toggleUserStatus({ userId: user.id, newStatus })).unwrap();
       toast({
@@ -143,11 +143,11 @@ const Users = () => {
       });
     }
   };
-  
+
   // Handle password reset
   const handleResetPassword = () => {
     if (!currentUser) return;
-    
+
     setIsResetPasswordDialogOpen(false);
     toast({
       title: "Success",
@@ -210,7 +210,7 @@ const Users = () => {
       alert("Export failed: " + (error?.message || "Unknown error"));
     }
   }
-  
+
   // Calculate counts
   const activeCount = users.filter(u => (u.status || u.Status || '').toLowerCase() === 'active').length;
   const inactiveCount = users.filter(u => (u.status || u.Status || '').toLowerCase() === 'inactive').length;
@@ -226,7 +226,7 @@ const Users = () => {
         title="Users"
         description="Manage platform users"
       />
-      
+
       <SearchFilter
         searchPlaceholder="Search users by name or email..."
         onSearch={handleSearch}
@@ -239,7 +239,7 @@ const Users = () => {
           },
         ]}
       />
-      
+
       <div className="flex gap-2 items-center mb-4">
         <select
           className="border rounded px-2 py-1 text-sm"
@@ -258,8 +258,8 @@ const Users = () => {
                 {userExportFieldsSelected.length === userExportFields.length
                   ? "All Fields"
                   : userExportFieldsSelected.length === 0
-                  ? "No Fields"
-                  : userExportFields
+                    ? "No Fields"
+                    : userExportFields
                       .filter(f => userExportFieldsSelected.includes(f.value))
                       .map(f => f.label)
                       .slice(0, 2)
@@ -334,12 +334,15 @@ const Users = () => {
                 </tr>
               ) : filteredUsers.length > 0 ? (
                 filteredUsers.map((user) => (
+
                   <tr key={user.id} className="hover:bg-gray-50">
+                    {/* console.log("user = ",user) */}
+                   
                     {userExportFields
                       .filter(f => userExportFieldsSelected.includes(f.value))
                       .map(field => (
                         <td key={field.value} className="whitespace-nowrap">
-                          {field.value === 'status' && (user.status || user.Status) ? (
+                          {field.value === 'status' ? (
                             <StatusBadge
                               status={String(user.status || user.Status || 'unknown')}
                               className={(user.status || user.Status)?.toLowerCase() === 'active'
@@ -363,10 +366,13 @@ const Users = () => {
                             (user.planType ?? user.plan ?? '')
                           ) : field.value === 'lastLogin' || field.value === 'registrationDate' ? (
                             user[field.value] ? formatDateTime(user[field.value]) : 'Never'
+                          ) : field.value === 'userId' ? (
+                            user.id        // 🔥 now it will show #1001 instead of internal id
                           ) : (
                             user[field.value] ?? ''
                           )}
                         </td>
+
                       ))}
                     <td>
                       <DropdownMenu>
@@ -409,14 +415,14 @@ const Users = () => {
           </table>
         </div>
       </div>
-      
+
       {/* User Profile Dialog */}
       <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle>User Profile</DialogTitle>
           </DialogHeader>
-          
+
           {currentUser && (
             <div className="py-4">
               <div className="flex items-center gap-4 mb-6">
@@ -428,52 +434,52 @@ const Users = () => {
                   <p className="text-gray-500">{currentUser.email}</p>
                   <StatusBadge
                     status={currentUser.status}
-                    className={`mt-1 ${currentUser.status === 'active' 
-                      ? 'bg-green-100 text-green-800' 
+                    className={`mt-1 ${currentUser.status === 'active'
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
-              
-                             <div className="space-y-4">
-                 <div className="grid grid-cols-2 gap-4">
-                   <div>
-                     <h4 className="text-sm font-medium text-gray-500">Total Questions Attempted</h4>
-                     <p className="text-lg font-medium mt-1">{currentUser.totalAttempted || '0'}</p>
-                   </div>
-                   <div>
-                     <h4 className="text-sm font-medium text-gray-500">Total Successful Questions</h4>
-                     <p className="text-lg font-medium mt-1">{currentUser.totalSuccessful || '0'}</p>
-                   </div>
-                   <div>
-                     <h4 className="text-sm font-medium text-gray-500">Last Login</h4>
-                     <p className="text-lg font-medium mt-1">{currentUser.lastLogin ? formatDateTime(currentUser.lastLogin) : 'Never'}</p>
-                   </div>
-                   <div>
-                     <h4 className="text-sm font-medium text-gray-500">Registration Date</h4>
-                     <p className="text-lg font-medium mt-1">{currentUser.registrationDate ? formatDateTime(currentUser.registrationDate) : 'Unknown'}</p>
-                   </div>
-                 </div>
-                 
-                 {/* Actions Display */}
-                 {currentUser.actions && (
-                   <div>
-                     <h4 className="text-sm font-medium text-gray-500 mb-2">User Actions</h4>
-                     <div className="bg-gray-50 p-3 rounded-md">
-                       <p className="text-sm text-gray-700 font-mono">
-                         {Array.isArray(currentUser.actions) 
-                           ? currentUser.actions.join(', ')
-                           : currentUser.actions
-                         }
-                       </p>
-                     </div>
-                   </div>
-                 )}
-               </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Total Questions Attempted</h4>
+                    <p className="text-lg font-medium mt-1">{currentUser.totalAttempted || '0'}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Total Successful Questions</h4>
+                    <p className="text-lg font-medium mt-1">{currentUser.totalSuccessful || '0'}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Last Login</h4>
+                    <p className="text-lg font-medium mt-1">{currentUser.lastLogin ? formatDateTime(currentUser.lastLogin) : 'Never'}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Registration Date</h4>
+                    <p className="text-lg font-medium mt-1">{currentUser.registrationDate ? formatDateTime(currentUser.registrationDate) : 'Unknown'}</p>
+                  </div>
+                </div>
+
+                {/* Actions Display */}
+                {currentUser.actions && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">User Actions</h4>
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      <p className="text-sm text-gray-700 font-mono">
+                        {Array.isArray(currentUser.actions)
+                          ? currentUser.actions.join(', ')
+                          : currentUser.actions
+                        }
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button onClick={() => setIsProfileDialogOpen(false)}>
               Close
@@ -481,7 +487,7 @@ const Users = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Reset Password Dialog */}
       <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
         <DialogContent className="sm:max-w-[450px]">
@@ -492,13 +498,13 @@ const Users = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsResetPasswordDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleResetPassword}
               className="bg-primary-light hover:bg-primary"
             >
