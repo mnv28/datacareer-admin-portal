@@ -15,6 +15,8 @@ export interface User {
   [key: string]: any; // Allow dynamic properties from API
 }
 
+export type UserPlan = 'free' | 'pro';
+
 interface UserState {
   users: any[]; // dynamic fields
   loading: boolean;
@@ -83,6 +85,29 @@ export const toggleUserStatus = createAsyncThunk(
   }
 );
 
+export const changeUserPlan = createAsyncThunk(
+  'user/changePlan',
+  async (
+    { userId, plan, cancelStripe }: { userId: number; plan: UserPlan; cancelStripe?: boolean },
+    { rejectWithValue }
+  ) => {
+    try {
+      const body: { userId: number; plan: UserPlan; cancelStripe?: boolean } = { userId, plan };
+      if (cancelStripe !== undefined) body.cancelStripe = cancelStripe;
+
+      const response = await apiInstance.patch(`/api/auth/admin/user/plan`, body, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      return rejectWithValue(axiosError.response?.data?.message || 'Failed to update user plan');
+    }
+  }
+);
+
 const userSlice = createSlice({
   name: 'user',
   initialState,
@@ -122,6 +147,18 @@ const userSlice = createSlice({
         }
       })
       .addCase(toggleUserStatus.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Change User Plan
+      .addCase(changeUserPlan.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(changeUserPlan.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(changeUserPlan.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

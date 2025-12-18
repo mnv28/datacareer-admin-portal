@@ -22,7 +22,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/redux/store';
-import { fetchUsersPreview, toggleUserStatus, setFilters } from '@/redux/Slices/userSlice';
+import { fetchUsersPreview, toggleUserStatus, setFilters, changeUserPlan, UserPlan } from '@/redux/Slices/userSlice';
 import { User as UserType } from '@/redux/Slices/userSlice';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -51,8 +51,11 @@ const Users = () => {
   const { users, loading, error, filters } = useSelector((state: RootState) => state.users);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = React.useState(false);
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = React.useState(false);
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = React.useState(false);
   const [currentUser, setCurrentUser] = React.useState<UserType | null>(null);
-
+  const [selectedPlan, setSelectedPlan] = React.useState<UserPlan>('free');
+  const [cancelStripe, setCancelStripe] = React.useState(false);
+  
   const userExportFields = [
     { label: "User ID", value: "userId" },
     { label: "Name", value: "name" },
@@ -110,6 +113,15 @@ const Users = () => {
     setIsResetPasswordDialogOpen(true);
   };
 
+  // Open plan alteration dialog
+  const openPlanDialog = (user: UserType) => {
+    setCurrentUser(user);
+    const currentPlan = String(user.planType ?? user.plan ?? '').toLowerCase();
+    setSelectedPlan(currentPlan === 'pro' ? 'pro' : 'free');
+    setCancelStripe(false);
+    setIsPlanDialogOpen(true);
+  };
+  
   // Toggle user status (activate/deactivate)
   const handleToggleUserStatus = async (user: UserType) => {
     console.log("user  = =", user);
@@ -141,6 +153,41 @@ const Users = () => {
       title: "Success",
       description: "Password reset link sent to the user's email",
     });
+  };
+
+  const handleChangePlan = async () => {
+    if (!currentUser) return;
+
+    try {
+      await dispatch(
+        changeUserPlan({
+          userId: currentUser.id,
+          plan: selectedPlan,
+          ...(selectedPlan === 'free' ? { cancelStripe } : {}),
+        })
+      ).unwrap();
+
+      // Refresh with current UI filters/fields
+      await dispatch(
+        fetchUsersPreview({
+          fields: userExportFieldsSelected,
+          search: filters.search,
+          dateRange: userExportDateRange === '7d' ? '7' : userExportDateRange === '30d' ? '30' : 'all',
+        })
+      );
+
+      setIsPlanDialogOpen(false);
+      toast({
+        title: "Success",
+        description: `User plan updated to ${selectedPlan.toUpperCase()}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error as string,
+        variant: "destructive",
+      });
+    }
   };
 
   async function exportUsersToCSV() {
@@ -302,6 +349,21 @@ const Users = () => {
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-gray-100 text-gray-800'}
                             />
+                          ) : field.value === 'manualPlanAlteration' ? (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openPlanDialog(user)}
+                              >
+                                Change Plan
+                              </Button>
+                              <span className="text-xs text-gray-500">
+                                {String(user.planType ?? user.plan ?? '').toLowerCase() === 'pro' ? 'pro' : 'free'}
+                              </span>
+                            </div>
+                          ) : field.value === 'plan' ? (
+                            (user.planType ?? user.plan ?? '')
                           ) : field.value === 'lastLogin' || field.value === 'registrationDate' ? (
                             user[field.value] ? formatDateTime(user[field.value]) : 'Never'
                           ) : field.value === 'userId' ? (
@@ -447,6 +509,64 @@ const Users = () => {
               className="bg-primary-light hover:bg-primary"
             >
               Send Reset Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Plan Alteration Dialog */}
+      <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Manual Plan Alteration</DialogTitle>
+            <DialogDescription>
+              Change subscription tier for {currentUser?.email}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 space-y-4">
+            <div className="space-y-1">
+              <div className="text-sm text-gray-600">
+                Current plan: <span className="font-medium">{String(currentUser?.planType ?? currentUser?.plan ?? 'unknown')}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">New plan</label>
+              <select
+                className="border rounded px-2 py-2 text-sm w-full"
+                value={selectedPlan}
+                onChange={(e) => {
+                  const next = e.target.value as UserPlan;
+                  setSelectedPlan(next);
+                  if (next !== 'free') setCancelStripe(false);
+                }}
+              >
+                <option value="free">free (trial)</option>
+                <option value="pro">pro (premium)</option>
+              </select>
+            </div>
+
+            {selectedPlan === 'free' && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={cancelStripe}
+                  onCheckedChange={(v) => setCancelStripe(Boolean(v))}
+                  id="cancel-stripe"
+                />
+                <label htmlFor="cancel-stripe" className="text-sm cursor-pointer">
+                  Cancel Stripe subscription (optional)
+                </label>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-2">
+            <Button variant="outline" onClick={() => setIsPlanDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleChangePlan} className="bg-primary-light hover:bg-primary">
+              Update Plan
             </Button>
           </DialogFooter>
         </DialogContent>
