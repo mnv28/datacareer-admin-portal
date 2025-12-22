@@ -29,7 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiInstance } from "@/api/axiosApi";
-import Pagination from "../components/ui/Pagination";
+import Pagination from "@/components/ui/pagination";
 
 // Status filter options
 const statusOptions = [
