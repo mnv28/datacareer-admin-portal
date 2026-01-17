@@ -50,6 +50,7 @@ const groupedFields = [
       { label: 'Number of Active Users', value: 'activeUsers' },
       { label: 'Average Active Period', value: 'avgActivePeriod' },
       { label: 'Breakdown of Users by Tier (On Trial/Pro)', value: 'userTier' },
+      { label: 'Number of Pro Users with Coupon', value: 'proUsersWithCoupon' },
     ],
   },
   {
@@ -57,6 +58,7 @@ const groupedFields = [
     value: 'questionsDatabase',
     fields: [
       { label: 'Number of Submissions', value: 'totalSubmissions' },
+      { label: 'Number of Saved Jobs', value: 'savedJobs' },
       { label: 'Number of Questions', value: 'totalQuestions' },
       { label: 'Breakdown of Questions by Difficulty', value: 'questionsByDifficulty' },
       { label: 'Breakdown of Questions by Company', value: 'questionsByCompany' },
@@ -84,7 +86,9 @@ async function exportToCSV(selectedFields, dateRange) {
     activeUsers: "numberOfActiveUsers",
     avgActivePeriod: "averageActivePeriod",
     userTier: "breakdownOfUsersByTier",
+    proUsersWithCoupon: "numberOfProUsersWithCoupon",
     totalSubmissions: "numberOfSubmissions",
+    savedJobs: "numberOfSavedJobs",
     totalQuestions: "numberOfQuestions",
     questionsByDifficulty: "breakdownOfQuestionsByDifficulty",
     questionsByCompany: "breakdownOfQuestionsByCompany",
@@ -157,7 +161,7 @@ const Dashboard = () => {
       ? selectedFields.filter(f => f !== fieldValue)
       : [...selectedFields, fieldValue]);
   };
-  
+
   // Show summary of selected fields
   const selectedLabels = groupedFields.flatMap(g => g.fields.filter(f => selectedFields.includes(f.value)).map(f => f.label));
   const summaryText = selectedLabels.length === getAllFieldValues().length
@@ -201,11 +205,11 @@ const Dashboard = () => {
     const beginner = getMetricValue('Questions by Difficulty - beginner');
     const intermediate = getMetricValue('Questions by Difficulty - intermediate');
     const advanced = getMetricValue('Questions by Difficulty - advanced');
-    
+
     if (beginner > 0) data.push({ name: 'Beginner', count: beginner, fill: '#7692FF' });
     if (intermediate > 0) data.push({ name: 'Intermediate', count: intermediate, fill: '#3D518C' });
     if (advanced > 0) data.push({ name: 'Advanced', count: advanced, fill: '#E9724C' });
-    
+
     return data;
   };
 
@@ -213,10 +217,10 @@ const Dashboard = () => {
     const data = [];
     const beginner = getMetricValue('Submissions by Difficulty - beginner');
     const intermediate = getMetricValue('Submissions by Difficulty - intermediate');
-    
+
     if (beginner > 0) data.push({ name: 'Beginner', count: beginner, fill: '#7692FF' });
     if (intermediate > 0) data.push({ name: 'Intermediate', count: intermediate, fill: '#3D518C' });
-    
+
     return data;
   };
 
@@ -236,22 +240,25 @@ const Dashboard = () => {
     const passed = getMetricValue('Submissions by Status - passed');
     const error = getMetricValue('Submissions by Status - error');
     const mismatch = getMetricValue('Submissions by Status - mismatch');
-    
+
     if (passed > 0) data.push({ name: 'Passed', count: passed, fill: '#7692FF' });
     if (error > 0) data.push({ name: 'Error', count: error, fill: '#E9724C' });
     if (mismatch > 0) data.push({ name: 'Mismatch', count: mismatch, fill: '#ABD3FA' });
-    
+
     return data;
   };
 
   const getUserTierData = () => {
     const trial = getMetricValue('Users by Tier - trial') || getMetricValue('Users by Tier - free');
-    const pro = getMetricValue('Users by Tier - pro');
-    
+    const totalPro = getMetricValue('Users by Tier - pro');
+    const proCoupon = getUsersWithCouponCode(); // Use the same flexible search as the card
+    const proWithoutCoupon = totalPro - proCoupon; // Subtract coupon users from total Pro
+
     const data = [];
     if (trial > 0) data.push({ name: 'On Trial', value: trial, fill: '#7692FF' });
-    if (pro > 0) data.push({ name: 'Pro', value: pro, fill: '#3D518C' });
-    
+    if (proWithoutCoupon > 0) data.push({ name: 'Pro', value: proWithoutCoupon, fill: '#3D518C' });
+    if (proCoupon > 0) data.push({ name: 'Pro (Coupon)', value: proCoupon, fill: '#E9724C' });
+
     return data;
   };
 
@@ -269,20 +276,20 @@ const Dashboard = () => {
       'Users with Coupon/Promo Code',
       'Number of Users with Coupon/Promo Code'
     ];
-    
+
     for (const metric of directMetrics) {
       const value = getMetricValue(metric);
       if (value > 0) return value;
     }
-    
+
     // Search through all dashboard data for any metric containing "coupon" or "promo"
-    const couponMetric = dashboardData.find(item => 
+    const couponMetric = dashboardData.find(item =>
       item.metric && (
-        item.metric.toLowerCase().includes('coupon') || 
+        item.metric.toLowerCase().includes('coupon') ||
         item.metric.toLowerCase().includes('promo')
       )
     );
-    
+
     return couponMetric ? couponMetric.value : 0;
   };
 
@@ -385,7 +392,7 @@ const Dashboard = () => {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
         <StatsCard
           title="Registered Users"
           value={dashboardLoading ? "Loading..." : getMetricValue('Number of Registered Users').toString()}
@@ -415,6 +422,11 @@ const Dashboard = () => {
           value={dashboardLoading ? "Loading..." : "0"}
           icon={<Briefcase size={24} className="text-primary-accent" />}
           change={{ value: "5%", positive: true }}
+        />
+        <StatsCard
+          title="Number of Saved Jobs"
+          value={dashboardLoading ? "Loading..." : getMetricValue('Number of Saved Jobs').toString()}
+          icon={<Briefcase size={24} className="text-primary-accent" />}
         />
       </div>
 
@@ -454,7 +466,7 @@ const Dashboard = () => {
       </div>
 
       {/* User Tier Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
           title="No. of users purchased through coupon code"
           value={dashboardLoading ? "Loading..." : getUsersWithCouponCode().toString()}
@@ -500,16 +512,16 @@ const Dashboard = () => {
             ) : getQuestionsByDifficultyData().length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                                     <Pie
-                     data={getQuestionsByDifficultyData()}
-                     cx="50%"
-                     cy="50%"
-                     labelLine={false}
-                     outerRadius={80}
-                     fill="#8884d8"
-                     dataKey="count"
-                     label={({ name, count }) => `${name}: ${count}`}
-                   >
+                  <Pie
+                    data={getQuestionsByDifficultyData()}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                    label={({ name, count }) => `${name}: ${count}`}
+                  >
                     {getQuestionsByDifficultyData().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
@@ -535,16 +547,16 @@ const Dashboard = () => {
             ) : getSubmissionsByDifficultyData().length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                                     <Pie
-                     data={getSubmissionsByDifficultyData()}
-                     cx="50%"
-                     cy="50%"
-                     labelLine={false}
-                     outerRadius={80}
-                     fill="#8884d8"
-                     dataKey="count"
-                     label={({ name, count }) => `${name}: ${count}`}
-                   >
+                  <Pie
+                    data={getSubmissionsByDifficultyData()}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                    label={({ name, count }) => `${name}: ${count}`}
+                  >
                     {getSubmissionsByDifficultyData().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}

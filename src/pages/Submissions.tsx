@@ -17,6 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { RootState, AppDispatch } from '@/redux/store';
 import { fetchSubmissions, setFilters, Submission } from '@/redux/Slices/submissionSlice';
 import { Label } from 'recharts';
+import { utils, writeFile } from 'xlsx';
+import { Download } from 'lucide-react';
 
 // Filter options
 const dbTypeOptions = [
@@ -57,6 +59,37 @@ const Submissions = () => {
 
   const handleSearch = (search: string) => {
     dispatch(setFilters({ search }));
+  };
+
+  const handleExportCSV = () => {
+    if (submissions.length === 0) {
+      toast({
+        title: "No data",
+        description: "There are no submissions to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const exportData = submissions.map(sub => ({
+      ID: sub.id,
+      User: sub.user,
+      Question: sub.question,
+      'DB Type': sub.dbType,
+      Status: sub.status,
+      'Date/Time': sub.dateTime,
+      Query: sub.code
+    }));
+
+    const ws = utils.json_to_sheet(exportData);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, "Submissions");
+    writeFile(wb, `submissions_export_${new Date().toISOString().split('T')[0]}.csv`);
+
+    toast({
+      title: "Success",
+      description: "Submissions exported to CSV successfully",
+    });
   };
 
   // Open submission details dialog
@@ -100,13 +133,22 @@ const Submissions = () => {
             onChange: handleStatusFilter,
           },
         ]}
-      />
+      >
+        <Button
+          onClick={handleExportCSV}
+          className="flex items-center gap-2 bg-primary-light hover:bg-primary text-white"
+        >
+          <Download size={18} />
+          Export CSV
+        </Button>
+      </SearchFilter>
 
       <div className="data-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>User</th>
                 <th>Question</th>
                 <th>DB Type</th>
@@ -118,25 +160,26 @@ const Submissions = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4">
+                  <td colSpan={7} className="text-center py-4">
                     Loading...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 text-red-500">
+                  <td colSpan={7} className="text-center py-4 text-red-500">
                     {error}
                   </td>
                 </tr>
               ) : submissions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-4 text-gray-500">
+                  <td colSpan={7} className="text-center py-4 text-gray-500">
                     No submissions found
                   </td>
                 </tr>
               ) : (
                 submissions.map((submission) => (
                   <tr key={submission.id} className="hover:bg-gray-50">
+                    <td>{submission.id}</td>
                     <td className="whitespace-nowrap">{submission.user}</td>
                     <td>{submission.question}</td>
                     <td>{submission.dbType}</td>

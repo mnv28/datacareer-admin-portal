@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import MonacoEditor from '@monaco-editor/react';
+import SearchFilter from '@/components/ui/SearchFilter';
 import { RootState, AppDispatch } from '@/redux/store';
 import {
   createTable,
@@ -41,15 +42,15 @@ const Tables = () => {
     insertData: '',
   });
 
-  // Fetch tables on component mount and when filters change
-  // useEffect(() => {
-  //   dispatch(fetchTables(filters));
-  // }, [dispatch, filters]);
-
   // Fetch dynamic tables
   useEffect(() => {
     dispatch(fetchDynamicTables());
   }, [dispatch]);
+
+  // Handle Search
+  const handleSearch = (search: string) => {
+    dispatch(setFilters({ search }));
+  };
 
   // Handle form data change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -237,7 +238,7 @@ const Tables = () => {
           const errorMessage = typeof resultAction.payload === "string"
             ? resultAction.payload
             : "Failed to save table. Please check the console for details.";
-console.log('errorMessage', errorMessage);
+          console.log('errorMessage', errorMessage);
           console.error('Table creation failed:', resultAction.payload);
 
           toast({
@@ -300,6 +301,11 @@ console.log('errorMessage', errorMessage);
         }
       />
 
+      <SearchFilter
+        searchPlaceholder="Search tables by name..."
+        onSearch={handleSearch}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-full text-center py-8 text-gray-500">
@@ -309,37 +315,39 @@ console.log('errorMessage', errorMessage);
           <div className="col-span-full text-center py-8 text-red-500">
             {error}
           </div>
-        ) : safeTables.length === 0 ? (
+        ) : safeTables.filter(table => table.name.toLowerCase().includes(filters.search.toLowerCase())).length === 0 ? (
           <div className="col-span-full text-center py-8 text-gray-500">
             No tables found
           </div>
         ) : (
-          safeTables.map(table => (
-            <div key={table.id} className="data-card">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-medium">{table.name}</h3>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => openDialog(table)}
-                  >
-                    <Pencil size={16} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => openDeleteDialog(table)}
-                    className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+          safeTables
+            .filter(table => table.name.toLowerCase().includes(filters.search.toLowerCase()))
+            .map(table => (
+              <div key={table.id} className="data-card">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-medium">{table.name}</h3>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => openDialog(table)}
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => openDeleteDialog(table)}
+                      className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            ))
         )}
       </div>
 

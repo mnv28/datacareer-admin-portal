@@ -90,8 +90,8 @@ const Sidebar = ({ onCollapsedChange }: SidebarProps) => {
     },
     {
       name: 'Home Page',
-      icon: BookOpen, // Placeholder, replace with a more suitable icon if available
-      path: '/home',
+      icon: BookOpen,
+      path: '/landing-page',
     },
     {
       name: 'Users',

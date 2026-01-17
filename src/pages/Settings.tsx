@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import PageHeader from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -13,57 +13,75 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useSearchParams } from 'react-router-dom';
+import { getSettings, updateSettings, updateAdminAccountSettings, getAdminProfile } from '@/services/settingsService';
 
 const Settings = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'features';
+
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  
-  // Feature flags
+  const [fetchingSettings, setFetchingSettings] = useState(true);
+
+  // Feature flags - mapped to backend settings
   const [featureFlags, setFeatureFlags] = useState({
     enableRegistration: true,
     enableSubmissions: true,
-    enableComments: false,
-    enableAnalytics: true,
-    enableNotifications: true,
   });
-  
-  // Theme settings
-  const [themeSettings, setThemeSettings] = useState({
-    primaryColor: '#3D518C',
-    accentColor: '#E9724C',
-    cardRadius: '0.5rem',
-    darkMode: false,
-  });
-  
+
   // Admin account settings
   const [adminSettings, setAdminSettings] = useState({
-    name: 'Admin User',
-    email: 'admin@datacareer.app',
-    password: '********',
+    name: '',
+    email: '',
+    newPassword: '',
   });
-  
-  const handleFeatureFlagChange = (key: keyof typeof featureFlags) => {
-    setFeatureFlags({
-      ...featureFlags,
-      [key]: !featureFlags[key],
-    });
+
+  // Fetch settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setFetchingSettings(true);
+        const [settings, profile] = await Promise.all([
+          getSettings(),
+          getAdminProfile()
+        ]);
+
+        if (settings) {
+          setFeatureFlags({
+            enableRegistration: settings.allowUserRegistration ?? true,
+            enableSubmissions: settings.allowQuestionSubmissions ?? true,
+          });
+        }
+
+        if (profile) {
+          setAdminSettings({
+            name: profile.name || '',
+            email: profile.email || '',
+            newPassword: '',
+          });
+        }
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load settings",
+          variant: "destructive",
+        });
+      } finally {
+        setFetchingSettings(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  const handleFeatureFlagChange = (key: keyof typeof featureFlags, checked: boolean) => {
+    setFeatureFlags(prev => ({
+      ...prev,
+      [key]: checked,
+    }));
   };
-  
-  const handleThemeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setThemeSettings({
-      ...themeSettings,
-      [name]: value,
-    });
-  };
-  
-  const handleThemeSwitchChange = (key: keyof typeof themeSettings) => {
-    setThemeSettings({
-      ...themeSettings,
-      [key]: !themeSettings[key],
-    });
-  };
-  
+
   const handleAdminSettingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setAdminSettings({
@@ -71,190 +89,118 @@ const Settings = () => {
       [name]: value,
     });
   };
-  
-  const saveSettings = (section: string) => {
-    setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      toast({
-        title: "Success",
-        description: `${section} settings updated successfully`,
-      });
-    }, 800);
+
+  const saveSettings = async (section: string) => {
+    if (section === 'Feature') {
+      setLoading(true);
+      try {
+        await updateSettings({
+          allowUserRegistration: featureFlags.enableRegistration,
+          allowQuestionSubmissions: featureFlags.enableSubmissions,
+        });
+        toast({
+          title: "Success",
+          description: "Feature settings updated successfully",
+        });
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update settings",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    } else if (section === 'Account') {
+      setLoading(true);
+      try {
+        await updateAdminAccountSettings({
+          name: adminSettings.name,
+          email: adminSettings.email,
+          ...(adminSettings.newPassword ? { newPassword: adminSettings.newPassword } : {}),
+        });
+        toast({
+          title: "Success",
+          description: "Admin account settings updated successfully",
+        });
+        // Clear password field after success
+        setAdminSettings(prev => ({ ...prev, newPassword: '' }));
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update account settings",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
   };
-  
+
   return (
     <AdminLayout>
       <PageHeader
         title="Settings"
         description="Configure platform settings"
       />
-      
-      <Tabs defaultValue="features">
-        <TabsList className="grid grid-cols-3 mb-8">
+
+      <Tabs
+        value={currentTab}
+        onValueChange={(value) => setSearchParams({ tab: value })}
+      >
+        <TabsList className="grid grid-cols-2 mb-8">
           <TabsTrigger value="features">Feature Flags</TabsTrigger>
-          <TabsTrigger value="theme">Theme Settings</TabsTrigger>
           <TabsTrigger value="account">Admin Account</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="features">
           <div className="data-card">
             <h2 className="text-lg font-semibold mb-6">Feature Configuration</h2>
-            
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">User Registration</h3>
-                  <p className="text-sm text-gray-500">Allow new users to register</p>
+
+            {fetchingSettings ? (
+              <div className="text-gray-500">Loading settings...</div>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">User Registration</h3>
+                    <p className="text-sm text-gray-500">Allow new users to register</p>
+                  </div>
+                  <Switch
+                    checked={featureFlags.enableRegistration}
+                    onCheckedChange={(checked) => handleFeatureFlagChange('enableRegistration', checked)}
+                  />
                 </div>
-                <Switch 
-                  checked={featureFlags.enableRegistration}
-                  onCheckedChange={() => handleFeatureFlagChange('enableRegistration')}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Question Submissions</h3>
-                  <p className="text-sm text-gray-500">Allow users to submit answers to questions</p>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Question Submissions</h3>
+                    <p className="text-sm text-gray-500">Allow users to submit answers to questions</p>
+                  </div>
+                  <Switch
+                    checked={featureFlags.enableSubmissions}
+                    onCheckedChange={(checked) => handleFeatureFlagChange('enableSubmissions', checked)}
+                  />
                 </div>
-                <Switch 
-                  checked={featureFlags.enableSubmissions}
-                  onCheckedChange={() => handleFeatureFlagChange('enableSubmissions')}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Comments & Discussions</h3>
-                  <p className="text-sm text-gray-500">Enable comment sections for questions</p>
+
+                <div className="pt-6 border-t border-gray-100">
+                  <Button
+                    onClick={() => saveSettings('Feature')}
+                    disabled={loading}
+                    className="bg-primary-light hover:bg-primary"
+                  >
+                    {loading ? 'Saving...' : 'Save Changes'}
+                  </Button>
                 </div>
-                <Switch 
-                  checked={featureFlags.enableComments}
-                  onCheckedChange={() => handleFeatureFlagChange('enableComments')}
-                />
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Analytics</h3>
-                  <p className="text-sm text-gray-500">Collect and display usage analytics</p>
-                </div>
-                <Switch 
-                  checked={featureFlags.enableAnalytics}
-                  onCheckedChange={() => handleFeatureFlagChange('enableAnalytics')}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Notifications</h3>
-                  <p className="text-sm text-gray-500">Send email notifications to users</p>
-                </div>
-                <Switch 
-                  checked={featureFlags.enableNotifications}
-                  onCheckedChange={() => handleFeatureFlagChange('enableNotifications')}
-                />
-              </div>
-              
-              <div className="pt-6 border-t border-gray-100">
-                <Button 
-                  onClick={() => saveSettings('Feature')} 
-                  disabled={loading}
-                  className="bg-primary-light hover:bg-primary"
-                >
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </div>
+            )}
           </div>
         </TabsContent>
-        
-        <TabsContent value="theme">
-          <div className="data-card">
-            <h2 className="text-lg font-semibold mb-6">Theme Configuration</h2>
-            
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="primaryColor">Primary Color</Label>
-                  <div className="flex mt-1">
-                    <Input
-                      type="text"
-                      id="primaryColor"
-                      name="primaryColor"
-                      value={themeSettings.primaryColor}
-                      onChange={handleThemeChange}
-                      className="rounded-r-none"
-                    />
-                    <div 
-                      className="w-10 h-10 rounded-r-md border-y border-r border-gray-200"
-                      style={{ backgroundColor: themeSettings.primaryColor }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="accentColor">Accent Color</Label>
-                  <div className="flex mt-1">
-                    <Input
-                      type="text"
-                      id="accentColor"
-                      name="accentColor"
-                      value={themeSettings.accentColor}
-                      onChange={handleThemeChange}
-                      className="rounded-r-none"
-                    />
-                    <div 
-                      className="w-10 h-10 rounded-r-md border-y border-r border-gray-200"
-                      style={{ backgroundColor: themeSettings.accentColor }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="cardRadius">Card Border Radius</Label>
-                <Input
-                  type="text"
-                  id="cardRadius"
-                  name="cardRadius"
-                  value={themeSettings.cardRadius}
-                  onChange={handleThemeChange}
-                  className="mt-1 max-w-xs"
-                />
-              </div>
-              
-              <div className="flex items-center justify-between max-w-xs">
-                <div>
-                  <h3 className="font-medium">Dark Mode</h3>
-                  <p className="text-sm text-gray-500">Enable dark theme</p>
-                </div>
-                <Switch 
-                  checked={themeSettings.darkMode}
-                  onCheckedChange={() => handleThemeSwitchChange('darkMode')}
-                />
-              </div>
-              
-              <div className="pt-6 border-t border-gray-100">
-                <Button 
-                  onClick={() => saveSettings('Theme')} 
-                  disabled={loading}
-                  className="bg-primary-light hover:bg-primary"
-                >
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-        
+
         <TabsContent value="account">
           <div className="data-card">
             <h2 className="text-lg font-semibold mb-6">Admin Account Settings</h2>
-            
+
             <div className="space-y-6 max-w-md">
               <div>
                 <Label htmlFor="name">Name</Label>
@@ -267,7 +213,7 @@ const Settings = () => {
                   className="mt-1"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -279,21 +225,23 @@ const Settings = () => {
                   className="mt-1"
                 />
               </div>
-              
+
               <div>
-                <Label htmlFor="password">Change Password</Label>
+                <Label htmlFor="newPassword">Change Password</Label>
                 <Input
                   type="password"
-                  id="password"
-                  name="password"
+                  id="newPassword"
+                  name="newPassword"
+                  value={adminSettings.newPassword}
+                  onChange={handleAdminSettingChange}
                   placeholder="Enter new password"
                   className="mt-1"
                 />
               </div>
-              
+
               <div className="pt-6 border-t border-gray-100">
-                <Button 
-                  onClick={() => saveSettings('Account')} 
+                <Button
+                  onClick={() => saveSettings('Account')}
                   disabled={loading}
                   className="bg-primary-light hover:bg-primary"
                 >

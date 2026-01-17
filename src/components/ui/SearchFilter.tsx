@@ -16,12 +16,14 @@ interface SearchFilterProps {
     value: string;
     onChange: (value: string) => void;
   }[];
+  children?: React.ReactNode;
 }
 
-const SearchFilter = ({ 
-  searchPlaceholder = 'Search...', 
+const SearchFilter = ({
+  searchPlaceholder = 'Search...',
   onSearch,
-  filters
+  filters,
+  children
 }: SearchFilterProps) => {
   return (
     <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -36,7 +38,7 @@ const SearchFilter = ({
           onChange={(e) => onSearch(e.target.value)}
         />
       </div>
-      
+
       {filters && filters.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {filters.map((filter) => (
@@ -56,6 +58,7 @@ const SearchFilter = ({
           ))}
         </div>
       )}
+      {children}
     </div>
   );
 };

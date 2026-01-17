@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth-context';
 import { useDispatch } from 'react-redux';
 import { logout } from '@/redux/Slices/authSlice';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -19,11 +19,11 @@ const Header = () => {
   const { logout: authLogout } = useAuth();
 
   const handleLogout = () => {
- 
+
     dispatch(logout());
- 
+
     authLogout();
-   
+
     localStorage.removeItem('token');
 
     navigate('/login');
@@ -34,7 +34,7 @@ const Header = () => {
       <div>
         <h1 className="text-xl font-semibold text-primary-dark">Admin Dashboard</h1>
       </div>
-      
+
       <div className="flex items-center space-x-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -49,14 +49,14 @@ const Header = () => {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <span>Profile</span>
+            <DropdownMenuItem onClick={() => navigate('/settings?tab=account')} className='cursor-pointer'>
+              <span >Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings?tab=features')} className='cursor-pointer'>
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               className="text-red-600 focus:text-red-600"
               onClick={handleLogout}
             >
