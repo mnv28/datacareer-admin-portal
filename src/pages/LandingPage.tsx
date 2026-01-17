@@ -294,14 +294,6 @@ const LandingPage = () => {
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!heroContent.badgeText || !heroContent.mainHeading) {
-            toast({
-                title: "Validation Error",
-                description: "Please fill in all fields",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setLoading(true);
         try {
@@ -329,14 +321,6 @@ const LandingPage = () => {
 
     const handleHeaderUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!featuresHeader.title) {
-            toast({
-                title: "Validation Error",
-                description: "Please fill in Title",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setHeaderLoading(true);
         try {
@@ -361,14 +345,6 @@ const LandingPage = () => {
 
     const handleDataSkiesUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!dataSkies.title) {
-            toast({
-                title: "Validation Error",
-                description: "Please fill in Title",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setDataSkiesLoading(true);
         try {
@@ -393,14 +369,6 @@ const LandingPage = () => {
 
     const handleSqlSectionUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!sqlSection.title || !sqlSection.subtitle) {
-            toast({
-                title: "Validation Error",
-                description: "Please fill in Title and Subtitle",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setSqlSectionLoading(true);
         try {
@@ -425,14 +393,6 @@ const LandingPage = () => {
 
     const handlePricingHeaderUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!pricingHeader.mainTitle || !pricingHeader.mainSubtitle) {
-            toast({
-                title: "Validation Error",
-                description: "Please fill in Title and Subtitle",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setPricingHeaderLoading(true);
         try {
@@ -457,14 +417,6 @@ const LandingPage = () => {
 
     const handlePricingCardUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!pricingCard.planName || !pricingCard.price) {
-            toast({
-                title: "Validation Error",
-                description: "Plan Name and Price are required",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setPricingCardLoading(true);
         try {
@@ -492,14 +444,6 @@ const LandingPage = () => {
 
     const handleHowItWorksUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!howItWorks.title || !howItWorks.subtitle) {
-            toast({
-                title: "Validation Error",
-                description: "Title and Subtitle are required",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setHowItWorksLoading(true);
         try {
@@ -524,14 +468,6 @@ const LandingPage = () => {
 
     const handleMapSectionUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!mapSection.title) {
-            toast({
-                title: "Validation Error",
-                description: "Title is required",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setMapSectionLoading(true);
         try {
@@ -559,14 +495,6 @@ const LandingPage = () => {
 
     const handleFaqHeaderUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!faqHeader.mainTitle || !faqHeader.mainSubtitle) {
-            toast({
-                title: "Validation Error",
-                description: "Title and Subtitle are required",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setFaqHeaderLoading(true);
         try {
@@ -591,14 +519,6 @@ const LandingPage = () => {
 
     const handleInterviewQuestionsHeaderUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!interviewQuestionsHeader.title || !interviewQuestionsHeader.subtitle || !interviewQuestionsHeader.description) {
-            toast({
-                title: "Validation Error",
-                description: "Title, Subtitle and Description are required",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setInterviewQuestionsHeaderLoading(true);
         try {
@@ -623,14 +543,6 @@ const LandingPage = () => {
 
     const handleSubHeroUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!subHero.title || !subHero.subtitle) {
-            toast({
-                title: "Validation Error",
-                description: "Title and Subtitle are required",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setSubHeroLoading(true);
         try {
@@ -655,14 +567,6 @@ const LandingPage = () => {
 
     const handleComingSoonHeaderUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!comingSoonHeader.mainTitle) {
-            toast({
-                title: "Validation Error",
-                description: "Main Title is required",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setComingSoonHeaderLoading(true);
         try {
@@ -687,14 +591,6 @@ const LandingPage = () => {
 
     const handleFeatureUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!featureData.title || !featureData.subtitle) {
-            toast({
-                title: "Validation Error",
-                description: "Please fill in Title and Subtitle",
-                variant: "destructive",
-            });
-            return;
-        }
 
         setFeatureLoading(true);
         try {
