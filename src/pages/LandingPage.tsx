@@ -1526,16 +1526,6 @@ const LandingPage = () => {
                         </div>
                     </form>
                 </div>
-
-                {/* Placeholder for future sections */}
-                <div className="data-card p-6 border rounded-lg bg-white shadow-sm opacity-60">
-                    <div className="flex items-center justify-between mb-2">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-800">Other Sections</h2>
-                            <p className="text-sm text-gray-500">Coming soon: Manage Pricing, Testimonials, and more.</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </AdminLayout>
     );

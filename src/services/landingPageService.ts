@@ -136,7 +136,7 @@ export const updateSubHero = async (payload: SubHeroPayload) => {
 
 export const getLandingPageSection = async (sectionName: string) => {
     const url = sectionName.startsWith('feature_')
-        ? `/api/landing-page/feature/${sectionName}`
+        ? `/api/landing-page/${sectionName}`
         : `/api/landing-page/${sectionName}`;
 
     try {
