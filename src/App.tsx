@@ -28,7 +28,7 @@ import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
-const App = () => {
+const AppContent = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
@@ -39,125 +39,131 @@ const App = () => {
   }, [dispatch]);
 
   return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Navigate to="/dashboard" replace />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/companies"
+                element={
+                  <ProtectedRoute>
+                    <Companies />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/domains"
+                element={
+                  <ProtectedRoute>
+                    <Domains />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/questions"
+                element={
+                  <ProtectedRoute>
+                    <Questions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/topics"
+                element={
+                  <ProtectedRoute>
+                    <Topics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tables"
+                element={
+                  <ProtectedRoute>
+                    <Tables />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/database"
+                element={
+                  <ProtectedRoute>
+                    <DatabasePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/job-database"
+                element={
+                  <ProtectedRoute>
+                    <JobDatabase />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/landing-page"
+                element={
+                  <ProtectedRoute>
+                    <LandingPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/submissions"
+                element={
+                  <ProtectedRoute>
+                    <Submissions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute>
+                    <Users />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
+
+const App = () => {
+  return (
     <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <Navigate to="/dashboard" replace />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/companies"
-                  element={
-                    <ProtectedRoute>
-                      <Companies />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/domains"
-                  element={
-                    <ProtectedRoute>
-                      <Domains />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/questions"
-                  element={
-                    <ProtectedRoute>
-                      <Questions />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/topics"
-                  element={
-                    <ProtectedRoute>
-                      <Topics />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/tables"
-                  element={
-                    <ProtectedRoute>
-                      <Tables />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/database"
-                  element={
-                    <ProtectedRoute>
-                      <DatabasePage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/job-database"
-                  element={
-                    <ProtectedRoute>
-                      <JobDatabase />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/landing-page"
-                  element={
-                    <ProtectedRoute>
-                      <LandingPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/submissions"
-                  element={
-                    <ProtectedRoute>
-                      <Submissions />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/users"
-                  element={
-                    <ProtectedRoute>
-                      <Users />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute>
-                      <Settings />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </AuthProvider>
-      </QueryClientProvider>
+      <AppContent />
     </Provider>
   );
 };
