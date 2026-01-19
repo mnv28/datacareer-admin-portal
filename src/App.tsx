@@ -5,8 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth-context";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { Provider } from 'react-redux';
-import { store } from '@/redux/store';
+import { Provider, useDispatch } from 'react-redux';
+import { store, AppDispatch } from '@/redux/store';
 
 // Import all pages
 import Login from "./pages/Login";
@@ -23,11 +23,22 @@ import NotFound from "./pages/NotFound";
 import DatabasePage from '@/pages/Database';
 import JobDatabase from './pages/JobDatabase';
 import LandingPage from './pages/LandingPage';
+import { fetchMe } from "./redux/Slices/authSlice";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <Provider store={store}>
+const AppContent = () => {
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      dispatch(fetchMe());
+    }
+  }, [dispatch]);
+
+  return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
@@ -146,7 +157,15 @@ const App = () => (
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
-  </Provider>
-);
+  );
+};
+
+const App = () => {
+  return (
+    <Provider store={store}>
+      <AppContent />
+    </Provider>
+  );
+};
 
 export default App;

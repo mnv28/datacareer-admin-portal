@@ -17,6 +17,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../redux/store';
 
 interface SidebarProps {
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -26,6 +28,7 @@ const Sidebar = ({ onCollapsedChange }: SidebarProps) => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [questionDbOpen, setQuestionDbOpen] = useState(true);
+  const { user } = useSelector((state: RootState) => state.auth);
 
   // Notify parent when collapsed state changes
   React.useEffect(() => {
@@ -220,12 +223,14 @@ const Sidebar = ({ onCollapsedChange }: SidebarProps) => {
           collapsed ? "justify-center" : "space-x-3"
         )}>
           <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center">
-            <span className="font-medium text-primary-dark">A</span>
+            <span className="font-medium text-primary-dark">
+              {user?.name?.[0].toUpperCase() || 'A'}
+            </span>
           </div>
           {!collapsed && (
-            <div>
-              <p className="text-sm font-medium">Admin User</p>
-              <p className="text-xs text-gray-300">admin@datacareer.app</p>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium truncate">{user?.name || 'Admin User'}</p>
+              <p className="text-xs text-gray-300 truncate">{user?.email || 'admin@datacareer.app'}</p>
             </div>
           )}
         </div>

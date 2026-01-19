@@ -344,7 +344,7 @@ const Companies = () => {
                             />
                           )}
                         </div>
-                        <span className="font-medium">{company.name}</span>
+                        <span className="font-medium">{company.name} </span>
                       </div>
                     </td>
                     <td>

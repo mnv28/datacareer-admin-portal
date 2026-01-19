@@ -483,11 +483,18 @@ const Users = () => {
                               </span>
                             </div>
                           ) : field.value === 'plan' ? (
-                            (user.planType ?? user.plan ?? '')
+                            (() => {
+                              const plan = String(user.planType ?? user.plan ?? '').toLowerCase();
+                              if (plan === 'free' || plan === 'trial') return 'On Trial';
+                              if (plan === 'pro' || plan === 'premium') {
+                                return user.promoCode ? 'Pro (Coupon)' : 'Pro';
+                              }
+                              return plan;
+                            })()
                           ) : field.value === 'lastLogin' || field.value === 'subscriptionStartDate' || field.value === 'registrationDate' ? (
                             user[field.value] ? formatDateTime(user[field.value]) : 'Never'
                           ) : field.value === 'userId' ? (
-                            user.id        // 🔥 now it will show #1001 instead of internal id
+                            user.id
                           ) : (
                             user[field.value] ?? ''
                           )}
