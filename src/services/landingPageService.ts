@@ -134,6 +134,19 @@ export const updateSubHero = async (payload: SubHeroPayload) => {
     return updateSectionContent('sub_hero', payload.content);
 };
 
+export const getLandingPageSection = async (sectionName: string) => {
+    const url = sectionName.startsWith('feature_')
+        ? `/api/landing-page/feature/${sectionName}`
+        : `/api/landing-page/${sectionName}`;
+
+    try {
+        const response = await apiInstance.get(url);
+        return response.data;
+    } catch (error: any) {
+        return handleApiError(error);
+    }
+};
+
 export const updateSectionContent = async (sectionName: string, content: any) => {
     const url = sectionName.startsWith('feature_')
         ? `/api/admin/landing-page/feature/${sectionName}`

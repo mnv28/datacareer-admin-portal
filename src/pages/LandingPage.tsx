@@ -20,8 +20,10 @@ import {
     updateFaqHeader,
     updateInterviewQuestionsHeader,
     updateComingSoonHeader,
-    updateSubHero
+    updateSubHero,
+    getLandingPageSection
 } from '@/services/landingPageService';
+import { useEffect } from 'react';
 
 const LandingPage = () => {
     const { toast } = useToast();
@@ -106,6 +108,139 @@ const LandingPage = () => {
         subtitle: '',
         points: ['', '', ''],
     });
+
+    useEffect(() => {
+        fetchAllData();
+    }, []);
+
+    const fetchAllData = async () => {
+        setLoading(true);
+        try {
+            // Fetch Hero
+            const heroRes = await getLandingPageSection('hero');
+            if (heroRes?.content) {
+                setHeroContent({
+                    badgeText: heroRes.content.badgeText || '',
+                    mainHeading: heroRes.content.mainHeading || '',
+                });
+            }
+
+            // Fetch Features Header
+            const featuresHeaderRes = await getLandingPageSection('features_header');
+            if (featuresHeaderRes?.content) {
+                setFeaturesHeader({
+                    title: featuresHeaderRes.content.title || '',
+                });
+            }
+
+            // Fetch Data Skies
+            const dataSkiesRes = await getLandingPageSection('data_skies');
+            if (dataSkiesRes?.content) {
+                setDataSkies({
+                    title: dataSkiesRes.content.title || '',
+                });
+            }
+
+            // Fetch SQL Section
+            const sqlSectionRes = await getLandingPageSection('sql_section');
+            if (sqlSectionRes?.content) {
+                setSqlSection({
+                    title: sqlSectionRes.content.title || '',
+                    subtitle: sqlSectionRes.content.subtitle || '',
+                });
+            }
+
+            // Fetch Pricing Header
+            const pricingHeaderRes = await getLandingPageSection('pricing_header');
+            if (pricingHeaderRes?.content) {
+                setPricingHeader({
+                    mainTitle: pricingHeaderRes.content.mainTitle || '',
+                    mainSubtitle: pricingHeaderRes.content.mainSubtitle || '',
+                });
+            }
+
+            // Fetch Pricing Card
+            const pricingCardRes = await getLandingPageSection('pricing_card');
+            if (pricingCardRes?.content) {
+                setPricingCard({
+                    planName: pricingCardRes.content.planName || '',
+                    badge: pricingCardRes.content.badge || '',
+                    price: pricingCardRes.content.price || '',
+                    points: pricingCardRes.content.points || ['', '', ''],
+                });
+            }
+
+            // Fetch How It Works
+            const howItWorksRes = await getLandingPageSection('how_it_works');
+            if (howItWorksRes?.content) {
+                setHowItWorks({
+                    title: howItWorksRes.content.title || '',
+                    subtitle: howItWorksRes.content.subtitle || '',
+                });
+            }
+
+            // Fetch Map Section
+            const mapSectionRes = await getLandingPageSection('map_section');
+            if (mapSectionRes?.content) {
+                setMapSection({
+                    title: mapSectionRes.content.title || '',
+                    points: mapSectionRes.content.points || ['', '', ''],
+                });
+            }
+
+            // Fetch FAQ Header
+            const faqHeaderRes = await getLandingPageSection('faq_header');
+            if (faqHeaderRes?.content) {
+                setFaqHeader({
+                    mainTitle: faqHeaderRes.content.mainTitle || '',
+                    mainSubtitle: faqHeaderRes.content.mainSubtitle || '',
+                });
+            }
+
+            // Fetch Interview Questions Header
+            const interviewRes = await getLandingPageSection('interview_questions_header');
+            if (interviewRes?.content) {
+                setInterviewQuestionsHeader({
+                    title: interviewRes.content.title || '',
+                    subtitle: interviewRes.content.subtitle || '',
+                    description: interviewRes.content.description || '',
+                });
+            }
+
+            // Fetch Sub Hero
+            const subHeroRes = await getLandingPageSection('sub_hero');
+            if (subHeroRes?.content) {
+                setSubHero({
+                    title: subHeroRes.content.title || '',
+                    subtitle: subHeroRes.content.subtitle || '',
+                });
+            }
+
+            // Fetch Coming Soon Header
+            const comingSoonRes = await getLandingPageSection('coming_soon_header');
+            if (comingSoonRes?.content) {
+                setComingSoonHeader({
+                    mainTitle: comingSoonRes.content.mainTitle || '',
+                });
+            }
+
+            // Initial fetch for feature_1
+            const feature1Res = await getLandingPageSection('feature_1');
+            if (feature1Res?.content) {
+                setFeatureData({
+                    sectionId: 'feature_1',
+                    title: feature1Res.content.title || '',
+                    subtitle: feature1Res.content.subtitle || '',
+                    points: feature1Res.content.points || ['', '', ''],
+                });
+            }
+
+        } catch (error: any) {
+            console.error("Failed to fetch landing page data", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -253,12 +388,39 @@ const LandingPage = () => {
         }));
     };
 
-    const handleFeatureChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleFeatureChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFeatureData((prev) => ({
             ...prev,
             [name]: value,
         }));
+
+        if (name === 'sectionId') {
+            setFeatureLoading(true);
+            try {
+                const res = await getLandingPageSection(value);
+                if (res?.content) {
+                    setFeatureData({
+                        sectionId: value,
+                        title: res.content.title || '',
+                        subtitle: res.content.subtitle || '',
+                        points: res.content.points || ['', '', ''],
+                    });
+                } else {
+                    // Reset if no content
+                    setFeatureData({
+                        sectionId: value,
+                        title: '',
+                        subtitle: '',
+                        points: ['', '', ''],
+                    });
+                }
+            } catch (error) {
+                console.error(`Failed to fetch data for ${value}`, error);
+            } finally {
+                setFeatureLoading(false);
+            }
+        }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
