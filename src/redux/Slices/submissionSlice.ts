@@ -5,6 +5,7 @@ import { AxiosError } from 'axios';
 export interface Submission {
   id: number;
   user: string;
+  userId: string;
   question: string;
   dbType: string;
   status: string;

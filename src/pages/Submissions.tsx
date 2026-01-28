@@ -74,6 +74,7 @@ const Submissions = () => {
     const exportData = submissions.map(sub => ({
       ID: sub.id,
       User: sub.user,
+      'User ID': sub.userId,
       Question: sub.question,
       'DB Type': sub.dbType,
       Status: sub.status,
@@ -150,6 +151,7 @@ const Submissions = () => {
               <tr>
                 <th>ID</th>
                 <th>User</th>
+                <th>User ID</th>
                 <th>Question</th>
                 <th>DB Type</th>
                 <th>Status</th>
@@ -160,19 +162,19 @@ const Submissions = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4">
+                  <td colSpan={8} className="text-center py-4">
                     Loading...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 text-red-500">
+                  <td colSpan={8} className="text-center py-4 text-red-500">
                     {error}
                   </td>
                 </tr>
               ) : submissions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 text-gray-500">
+                  <td colSpan={8} className="text-center py-4 text-gray-500">
                     No submissions found
                   </td>
                 </tr>
@@ -181,6 +183,7 @@ const Submissions = () => {
                   <tr key={submission.id} className="hover:bg-gray-50">
                     <td>{submission.id}</td>
                     <td className="whitespace-nowrap">{submission.user}</td>
+                    <td className="whitespace-nowrap">{submission.userId}</td>
                     <td>{submission.question}</td>
                     <td>{submission.dbType}</td>
                     <td>

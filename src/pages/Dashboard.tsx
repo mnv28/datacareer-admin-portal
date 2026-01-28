@@ -453,7 +453,12 @@ const Dashboard = () => {
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
+                  label={(entry) => {
+                    const data = getUserTierData();
+                    const total = data.reduce((sum, item) => sum + item.value, 0);
+                    const percent = ((entry.value / total) * 100).toFixed(1);
+                    return `${entry.name}: ${percent}%`;
+                  }}
                 >
                   {getUserTierData().map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -529,7 +534,12 @@ const Dashboard = () => {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"
-                    label={({ name, count }) => `${name}: ${count}`}
+                    label={(entry) => {
+                      const data = getQuestionsByDifficultyData();
+                      const total = data.reduce((sum, item) => sum + item.count, 0);
+                      const percent = ((entry.count / total) * 100).toFixed(1);
+                      return `${entry.name}: ${percent}%`;
+                    }}
                   >
                     {getQuestionsByDifficultyData().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -564,7 +574,12 @@ const Dashboard = () => {
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="count"
-                    label={({ name, count }) => `${name}: ${count}`}
+                    label={(entry) => {
+                      const data = getSubmissionsByDifficultyData();
+                      const total = data.reduce((sum, item) => sum + item.count, 0);
+                      const percent = ((entry.count / total) * 100).toFixed(1);
+                      return `${entry.name}: ${percent}%`;
+                    }}
                   >
                     {getSubmissionsByDifficultyData().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
