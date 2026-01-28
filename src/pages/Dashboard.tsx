@@ -301,6 +301,10 @@ const Dashboard = () => {
     return getMetricValue('Users by Tier - trial') || getMetricValue('Users by Tier - free') || 0;
   };
 
+  const getAdminUsers = () => {
+    return getMetricValue('Number of Admin Users') || getMetricValue('Admin Users') || 0;
+  };
+
   const getSubmissionsByCompanyData = () => {
     const data = [];
     dashboardData.forEach(item => {
@@ -468,18 +472,23 @@ const Dashboard = () => {
       {/* User Tier Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
-          title="No. of users purchased through coupon code"
+          title="Pro (Coupon) Users"
           value={dashboardLoading ? "Loading..." : getUsersWithCouponCode().toString()}
           icon={<Users size={24} className="text-primary-accent" />}
         />
         <StatsCard
-          title="Number of Paid Users"
+          title="Pro Users"
           value={dashboardLoading ? "Loading..." : getPaidUsers().toString()}
           icon={<Users size={24} className="text-primary-accent" />}
         />
         <StatsCard
-          title="On Trial"
+          title="On Trial Users"
           value={dashboardLoading ? "Loading..." : getOnTrialUsers().toString()}
+          icon={<Users size={24} className="text-primary-accent" />}
+        />
+        <StatsCard
+          title="Admin Users"
+          value={dashboardLoading ? "Loading..." : getAdminUsers().toString()}
           icon={<Users size={24} className="text-primary-accent" />}
         />
       </div>
