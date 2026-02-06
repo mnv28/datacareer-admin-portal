@@ -236,28 +236,57 @@ const Dashboard = () => {
   };
 
   const getSubmissionsByStatusData = () => {
-    const data = [];
-    const passed = getMetricValue('Submissions by Status - passed');
-    const error = getMetricValue('Submissions by Status - error');
-    const mismatch = getMetricValue('Submissions by Status - mismatch');
+    const dataMap: { [key: string]: { name: string, count: number, fill: string } } = {};
+    const statusConfig: { [key: string]: { label: string, fill: string } } = {
+      'passed': { label: 'Passed', fill: '#7692FF' },
+      'failed': { label: 'Failed', fill: '#E9724C' },
+      'error': { label: 'Error', fill: '#E9724C' },
+      'mismatch': { label: 'Mismatch', fill: '#ABD3FA' },
+      'undefined': { label: 'Unknown', fill: '#ABD3FA' }
+    };
 
-    if (passed > 0) data.push({ name: 'Passed', count: passed, fill: '#7692FF' });
-    if (error > 0) data.push({ name: 'Error', count: error, fill: '#E9724C' });
-    if (mismatch > 0) data.push({ name: 'Mismatch', count: mismatch, fill: '#ABD3FA' });
+    dashboardData.forEach(item => {
+      if (item.metric.startsWith('Submissions by Status - ')) {
+        const rawKey = item.metric.replace('Submissions by Status - ', '');
+        const key = rawKey.toLowerCase();
+        const config = statusConfig[key] || {
+          label: rawKey.charAt(0).toUpperCase() + rawKey.slice(1),
+          fill: '#ABD3FA'
+        };
 
-    return data;
+        if (dataMap[key]) {
+          dataMap[key].count += item.value;
+        } else {
+          dataMap[key] = {
+            name: config.label,
+            count: item.value,
+            fill: config.fill
+          };
+        }
+      }
+    });
+
+    return Object.values(dataMap);
   };
 
   const getUserTierData = () => {
-    const trial = getMetricValue('Users by Tier - trial') || getMetricValue('Users by Tier - free');
-    const totalPro = getMetricValue('Users by Tier - pro');
-    const proCoupon = getUsersWithCouponCode(); // Use the same flexible search as the card
-    const proWithoutCoupon = totalPro - proCoupon; // Subtract coupon users from total Pro
-
     const data = [];
-    if (trial > 0) data.push({ name: 'On Trial', value: trial, fill: '#7692FF' });
-    if (proWithoutCoupon > 0) data.push({ name: 'Pro', value: proWithoutCoupon, fill: '#3D518C' });
-    if (proCoupon > 0) data.push({ name: 'Pro (Coupon)', value: proCoupon, fill: '#E9724C' });
+
+    const trialValue = getOnTrialUsers();
+    const proValue = getPaidUsers();
+    const couponValue = getUsersWithCouponCode();
+
+    if (trialValue > 0) {
+      data.push({ name: 'On Trial', value: trialValue, fill: '#7692FF' });
+    }
+
+    if (proValue > 0) {
+      data.push({ name: 'Pro', value: proValue, fill: '#3D518C' });
+    }
+
+    if (couponValue > 0) {
+      data.push({ name: 'Pro (Coupon)', value: couponValue, fill: '#E9724C' });
+    }
 
     return data;
   };

@@ -262,25 +262,52 @@ const Users = () => {
     }
   };
 
-  async function exportUsersToCSV() {
-    const params = new URLSearchParams();
-    params.append("dateRange", userExportDateRange === "7d" ? "7" : userExportDateRange === "30d" ? "30" : "all");
-    userExportFieldsSelected.forEach(field => params.append("fields", field));
-    try {
-      const response = await apiInstance.get(
-        `/api/export/admin/exportCSV?${params.toString()}`,
-        { responseType: "blob" }
-      );
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `users_export_${userExportDateRange}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      alert("Export failed: " + (error?.message || "Unknown error"));
+  const getPlanLabel = (user: UserType) => {
+    const plan = String(user.planType ?? user.plan ?? '').toLowerCase();
+    // Check for admin role if it exists in the user object
+    if (user.role?.toLowerCase() === 'admin' || user.isAdmin === true) return 'Admin';
+    if (plan === 'free' || plan === 'trial') return 'On Trial';
+    if (plan === 'pro' || plan === 'premium') {
+      return user.promoCode ? 'Pro (Coupon)' : 'Pro';
     }
+    return plan;
+  };
+
+  async function exportUsersToCSV() {
+    // Generate CSV on frontend to ensure labels match the UI
+    const headers = userExportFields
+      .filter(f => userExportFieldsSelected.includes(f.value))
+      .map(f => f.label);
+
+    const rows = users.map(user => {
+      return userExportFields
+        .filter(f => userExportFieldsSelected.includes(f.value))
+        .map(field => {
+          let value = '';
+          if (field.value === 'plan') {
+            value = getPlanLabel(user);
+          } else if (field.value === 'lastLogin' || field.value === 'subscriptionStartDate' || field.value === 'registrationDate') {
+            value = user[field.value] ? formatDateTime(user[field.value]) : 'Never';
+          } else if (field.value === 'userId') {
+            value = user.id;
+          } else {
+            value = user[field.value] ?? '';
+          }
+          // Escape quotes and wrap in quotes for CSV
+          return `"${String(value).replace(/"/g, '""')}"`;
+        }).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `users_export_${userExportDateRange}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   // Calculate counts
@@ -483,14 +510,7 @@ const Users = () => {
                               </span>
                             </div>
                           ) : field.value === 'plan' ? (
-                            (() => {
-                              const plan = String(user.planType ?? user.plan ?? '').toLowerCase();
-                              if (plan === 'free' || plan === 'trial') return 'On Trial';
-                              if (plan === 'pro' || plan === 'premium') {
-                                return user.promoCode ? 'Pro (Coupon)' : 'Pro';
-                              }
-                              return plan;
-                            })()
+                            getPlanLabel(user)
                           ) : field.value === 'lastLogin' || field.value === 'subscriptionStartDate' || field.value === 'registrationDate' ? (
                             user[field.value] ? formatDateTime(user[field.value]) : 'Never'
                           ) : field.value === 'userId' ? (
