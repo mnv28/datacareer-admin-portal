@@ -4,7 +4,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import SearchFilter from '@/components/ui/SearchFilter';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
-import { User, Eye, RotateCcw, Ban, CheckCircle, Trash2, ArrowUpDown } from 'lucide-react';
+import { User, Eye, RotateCcw, Ban, CheckCircle, Trash2, ArrowUpDown, UserCheck } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,10 +22,11 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/redux/store';
-import { fetchUsersPreview, toggleUserStatus, setFilters, changeUserPlan, resetUserPassword, deleteUser, UserPlan } from '@/redux/Slices/userSlice';
+import { fetchUsersPreview, toggleUserStatus, setFilters, changeUserPlan, resetUserPassword, deleteUser, changeUserRole, UserPlan } from '@/redux/Slices/userSlice';
 import { User as UserType } from '@/redux/Slices/userSlice';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiInstance } from "@/api/axiosApi";
@@ -73,6 +74,8 @@ const Users = () => {
     { label: "Registration Date", value: "registrationDate" },
     { label: "Total Attempted Questions", value: "totalAttempted" },
     { label: "Total Successful Questions", value: "totalSuccessful" },
+    { label: "Saved Jobs Count", value: "savedJobsCount" },
+    { label: "Role", value: "role" },
     // { label: "Actions", value: "actions" },
     { label: "Manual Plan Alteration", value: "manualPlanAlteration" },
   ];
@@ -133,8 +136,7 @@ const Users = () => {
   // Open plan alteration dialog
   const openPlanDialog = (user: UserType) => {
     setCurrentUser(user);
-    const currentPlan = String(user.planType ?? user.plan ?? '').toLowerCase();
-    setSelectedPlan(currentPlan === 'pro' ? 'pro' : 'free');
+    setSelectedPlan(String(user.planType ?? user.plan ?? 'free').toLowerCase() as UserPlan);
     setCancelStripe(false);
     setIsPlanDialogOpen(true);
   };
@@ -152,6 +154,33 @@ const Users = () => {
         title: "Success",
         description: `User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
       });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error as string,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleRole = async (user: UserType, checked: boolean) => {
+    const newRole = checked ? 'admin' : 'user';
+    try {
+      await dispatch(changeUserRole({ userId: user.id, role: newRole })).unwrap();
+
+      toast({
+        title: "Success",
+        description: `User role updated to ${newRole.toUpperCase()} successfully`,
+      });
+
+      // Refresh data
+      dispatch(
+        fetchUsersPreview({
+          fields: userExportFieldsSelected,
+          search: filters.search,
+          dateRange: userExportDateRange === '7d' ? '7' : userExportDateRange === '30d' ? '30' : 'all',
+        })
+      );
     } catch (error) {
       toast({
         title: "Error",
@@ -290,6 +319,8 @@ const Users = () => {
             value = user[field.value] ? formatDateTime(user[field.value]) : 'Never';
           } else if (field.value === 'userId') {
             value = user.id;
+          } else if (field.value === 'role') {
+            value = user.role || user.Role || (user.isAdmin ? 'admin' : '');
           } else {
             value = user[field.value] ?? '';
           }
@@ -515,6 +546,16 @@ const Users = () => {
                             user[field.value] ? formatDateTime(user[field.value]) : 'Never'
                           ) : field.value === 'userId' ? (
                             user.id
+                          ) : field.value === 'role' ? (
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={String(user.role || user.Role || (user.isAdmin ? 'admin' : '')).toLowerCase() === 'admin'}
+                                onCheckedChange={(checked) => handleToggleRole(user, checked)}
+                              />
+                              <span className="text-xs font-medium capitalize w-12 text-center">
+                                {String(user.role || user.Role || (user.isAdmin ? 'admin' : '') || 'user')}
+                              </span>
+                            </div>
                           ) : (
                             user[field.value] ?? ''
                           )}

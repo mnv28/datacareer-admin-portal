@@ -132,6 +132,30 @@ export const resetUserPassword = createAsyncThunk(
   }
 );
 
+export const changeUserRole = createAsyncThunk(
+  'user/changeRole',
+  async (
+    { userId, role }: { userId: number; role: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await apiInstance.patch(
+        `/api/auth/admin/user/role`,
+        { userId, role },
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      return rejectWithValue(axiosError.response?.data?.message || 'Failed to update user role');
+    }
+  }
+);
+
 export const deleteUser = createAsyncThunk(
   'user/deleteUser',
   async (
@@ -219,6 +243,22 @@ const userSlice = createSlice({
         state.loading = false;
       })
       .addCase(resetUserPassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Change User Role
+      .addCase(changeUserRole.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(changeUserRole.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.users.findIndex(user => user.id === action.payload.id);
+        if (index !== -1) {
+          state.users[index] = action.payload;
+        }
+      })
+      .addCase(changeUserRole.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
