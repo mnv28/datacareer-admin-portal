@@ -440,8 +440,8 @@ const Dashboard = () => {
           tooltip="Represents the total number of unique users who have made at least one submission during the period you have filtered (e.g., Last 7 days, 30 days, or All time)."
         />
         <StatsCard
-          title="Average Active Period (hours)"
-          value={dashboardLoading ? "Loading..." : getMetricValue('Average Active Period (Days)').toString()}
+          title="Average Active Period (Hours)"
+          value={dashboardLoading ? "Loading..." : getMetricValue('Average Active Period (Hours)').toString()}
           icon={<Clock size={24} className="text-primary-accent" />}
           change={{ value: "8%", positive: true }}
         />
