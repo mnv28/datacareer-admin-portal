@@ -295,8 +295,9 @@ const Dashboard = () => {
 
   // Helper functions for user tier cards
   const getUsersWithCouponCode = () => {
-    // Try multiple possible metric names
+    // Try multiple possible metric names including the one from logs
     const directMetrics = [
+      'Pro (Coupon) Users',
       'Users with Coupon Code',
       'Users with Promo Code',
       'Number of users purchased through coupon code',
@@ -325,11 +326,11 @@ const Dashboard = () => {
   };
 
   const getPaidUsers = () => {
-    return getMetricValue('Users by Tier - pro') || 0;
+    return getMetricValue('Pro Users') || getMetricValue('Users by Tier - pro') || 0;
   };
 
   const getOnTrialUsers = () => {
-    return getMetricValue('Users by Tier - trial') || getMetricValue('Users by Tier - free') || 0;
+    return getMetricValue('On Trial Users') || getMetricValue('Users by Tier - trial') || getMetricValue('Users by Tier - free') || 0;
   };
 
   const getAdminUsers = () => {
