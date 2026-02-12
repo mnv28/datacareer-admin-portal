@@ -24,6 +24,7 @@ interface UserState {
   filters: {
     search: string;
     status: string;
+    role: string;
   };
   fields: string[];
 }
@@ -34,7 +35,8 @@ const initialState: UserState = {
   error: null,
   filters: {
     search: '',
-    status: ''
+    status: '',
+    role: ''
   },
   fields: []
 };
@@ -42,13 +44,15 @@ const initialState: UserState = {
 export const fetchUsersPreview = createAsyncThunk(
   'user/fetchUsersPreview',
   async (
-    params: { fields: string[]; search?: string; dateRange?: string },
+    params: { fields: string[]; search?: string; status?: string; role?: string; dateRange?: string },
     { rejectWithValue }
   ) => {
     try {
       const urlParams = new URLSearchParams();
       params.fields.forEach(field => urlParams.append('fields', field));
       if (params.search !== undefined) urlParams.append('search', params.search);
+      if (params.status !== undefined) urlParams.append('status', params.status);
+      if (params.role !== undefined) urlParams.append('role', params.role);
       if (params.dateRange !== undefined) urlParams.append('dateRange', params.dateRange);
       const response = await apiInstance.get(`/api/export/admin/previewUsersExport?${urlParams.toString()}`, {
         headers: {

@@ -38,6 +38,12 @@ const statusOptions = [
   { value: 'inactive', label: 'Inactive' },
 ];
 
+// Role filter options
+const roleOptions = [
+  { value: 'user', label: 'User' },
+  { value: 'admin', label: 'Admin' },
+];
+
 function formatDateTime(dateString: string) {
   const date = new Date(dateString);
   const yyyy = date.getFullYear();
@@ -104,10 +110,12 @@ const Users = () => {
       fetchUsersPreview({
         fields: userExportFieldsSelected,
         search: filters.search,
+        status: filters.status,
+        role: filters.role,
         dateRange: userExportDateRange === '7d' ? '7' : userExportDateRange === '30d' ? '30' : 'all',
       })
     );
-  }, [dispatch, filters.search, userExportFieldsSelected, userExportDateRange]);
+  }, [dispatch, filters.search, filters.status, filters.role, userExportFieldsSelected, userExportDateRange]);
 
   // Search and filter users
   const handleSearch = (term: string) => {
@@ -117,6 +125,11 @@ const Users = () => {
 
   const handleStatusFilter = (status: string) => {
     dispatch(setFilters({ status }));
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+
+  const handleRoleFilter = (role: string) => {
+    dispatch(setFilters({ role }));
     setCurrentPage(1); // Reset to first page on filter change
   };
 
@@ -345,10 +358,19 @@ const Users = () => {
   const activeCount = users.filter(u => (u.status || u.Status || '').toLowerCase() === 'active').length;
   const inactiveCount = users.filter(u => (u.status || u.Status || '').toLowerCase() === 'inactive').length;
 
-  // Filter users in UI
-  let filteredUsers = filters.status
-    ? users.filter(u => (u.status || u.Status || '').toLowerCase() === filters.status)
-    : users;
+  // Filter users in UI - now handled by API but keeping for robustness
+  let filteredUsers = users;
+
+  if (filters.status) {
+    filteredUsers = filteredUsers.filter(u => (u.status || u.Status || '').toLowerCase() === filters.status);
+  }
+
+  if (filters.role) {
+    filteredUsers = filteredUsers.filter(u => {
+      const userRole = String(u.role || u.Role || (u.isAdmin ? 'admin' : '') || 'user').toLowerCase();
+      return userRole === filters.role;
+    });
+  }
 
   // Sort users by User ID
   if (sortField === 'userId') {
@@ -396,6 +418,12 @@ const Users = () => {
             options: statusOptions,
             value: filters.status,
             onChange: handleStatusFilter,
+          },
+          {
+            name: "Role",
+            options: roleOptions,
+            value: filters.role,
+            onChange: handleRoleFilter,
           },
         ]}
       />

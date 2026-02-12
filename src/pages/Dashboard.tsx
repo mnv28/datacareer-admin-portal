@@ -217,9 +217,11 @@ const Dashboard = () => {
     const data = [];
     const beginner = getMetricValue('Submissions by Difficulty - beginner');
     const intermediate = getMetricValue('Submissions by Difficulty - intermediate');
+    const advanced = getMetricValue('Submissions by Difficulty - advanced');
 
     if (beginner > 0) data.push({ name: 'Beginner', count: beginner, fill: '#7692FF' });
     if (intermediate > 0) data.push({ name: 'Intermediate', count: intermediate, fill: '#3D518C' });
+    if (advanced > 0) data.push({ name: 'Advanced', count: advanced, fill: '#E9724C' });
 
     return data;
   };
